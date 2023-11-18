@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+  	<title>Login 10</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+	
+    {% load static %}
+	<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+
+	</head>
+    {% load static %}
+	<body class="img js-fullheight" style="background-image: url('{% static "images/香格里拉 雪山 打光.jpg" %}');">
+
+	<section class="ftco-section">
+		<div class="container">
+			<div class="row justify-content-center">
+				<div class="col-md-6 col-lg-4">
+					<div class="login-wrap p-0">
+		      	<h3 class="mb-4 text-center"><b>Member Login</b></h3>
+		      	<form action="{% url 'esign:login' %}" class="signin-form" method="POST">
+                    {% csrf_token %}
+		      		<div class="form-group">
+		      			<input type="text" class="form-control" placeholder="Member ID" name="username" required>
+		      		</div>
+	            <div class="form-group">
+	              <input id="password-field" type="password" class="form-control" placeholder="Password" name="psw" required>
+	              <span toggle="#password-field" class="fa fa-fw fa-eye field-icon toggle-password"></span>
+	            </div>
+	            <div class="form-group">
+	            	<button type="submit" class="form-control btn btn-primary submit px-3">Sign In</button>
+	            </div>
+	            <div class="form-group d-md-flex">
+	            	<div class="w-50">
+								</div>
+								<div class="w-50 text-md-right">
+									<a href="#" style="color: #fff">Forgot Password</a>
+								</div>
+	            </div>
+	          </form>
+	          
+		      </div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+	<!-- Bootstrap Modal for logout success -->
+<div class="modal fade" id="logoutSuccessModal" tabindex="-1" role="dialog" aria-labelledby="logoutSuccessModalLabel" aria-hidden="true">
+	<div class="modal-dialog" role="document">
+	  <div class="modal-content">
+		<div class="modal-header">
+		  <h5 class="modal-title" id="logoutSuccessModalLabel">Logout Success</h5>
+		  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+			<span aria-hidden="true">&times;</span>
+		  </button>
+		</div>
+		<div class="modal-body">
+		  You have successfully logged out.
+		</div>
+	  </div>
+	</div>
+  </div>
+
+	<script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/popper.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+
+    <!-- Trigger the modal on page load -->
+  <!-- Bootstrap Modal for logout success -->
+{% if show_logout_modal %}
+<script>
+  $(document).ready(function(){
+    $('#logoutSuccessModal').modal('show');
+  });
+</script>
+{% endif %}
+
+	</body>
+</html>
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/course.css' %}">
+</head>
+<body> -->
+<!--- Add a login form here  --->
+<!-- <form action="{% url 'esign:login' %}"  method="post">
+    {% csrf_token %}
+    <div class="container">
+      <h1>Login</h1>
+      <label for="username"><b>User Name</b></label>
+      <input type="text" placeholder="Enter User Name: " name="username" required>
+      <label for="psw"><b>Password</b></label>
+      <input type="password" placeholder="Enter Password: " name="psw" required>
+      <div>
+        <button class="button" type="submit">Login</button>
+      </div>
+    </div>
+  </form>
+</body> -->

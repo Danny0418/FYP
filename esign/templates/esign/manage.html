@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Add this in the head section of your HTML file -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <!-- Add this in the head section of your HTML file -->
+<!-- Use the latest version of idle-js from jsDelivr -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/idle-js@1.2.0/dist/Idle.min.js"></script> -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+<!-- PDF.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+<!-- CSS -->
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
+    <meta charset="UTF-8">
+    <title>{{document.title}}</title>
+    <script>
+      function checkSessionStatus() {
+          // Send an AJAX request to a Django view that checks the session status
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', '/esign/check_session/', true);
+          xhr.onreadystatechange = function () {
+              if (xhr.readyState === 4) {
+                  if (xhr.status === 200) {
+                      var response = JSON.parse(xhr.responseText);
+                      if (response.session_expired) {
+    
+                        // Create a new Bootstrap modal element
+                var modalHTML = `
+                  <div class="modal fade" id="sessionExpiredModal" tabindex="-1" role="dialog" aria-labelledby="sessionExpiredModalLabel" aria-hidden="true" data-backdrop="static">
+                    <div class="modal-dialog" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="sessionExpiredModalLabel">Session Expired</h5>
+                        </div>
+                        <div class="modal-body">
+                          Your session has expired. Please log in again.
+                        </div>
+                        <div class="modal-footer">
+                          <!-- Add any buttons or additional content here if needed -->
+                          <a href="/esign/login" class="btn btn-primary">Log In</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+    
+                // Set the body content to the modal HTML
+                document.body.innerHTML = modalHTML;
+    
+                // Show the Bootstrap modal
+                $('#sessionExpiredModal').modal('show');
+                          // Display an alert to the user
+    //             alert("Your session has expired. Please log in again.");
+    
+    // // Redirect the user to the login page
+    // window.location.href = '/esign/login';
+                      }
+                  } else {
+                      console.error('Error checking session status:', xhr.statusText);
+                  }
+              }
+          };
+          xhr.send();
+      }
+    
+      checkSessionStatus();
+      // Check the session status every 60 seconds (adjust as needed)
+      setInterval(checkSessionStatus, 60000);
+    </script>
+
+
+<style>
+    /* Add custom styles for the canvas */
+    #pdfCanvas {
+        border: 5px solid #333; /* Thick border */
+        width: 100%; /* Canvas width */
+        height: 100%; /* Canvas height */
+    }
+</style>
+</head>
+<body>
+    <div class="container-fluid ">
+        <div style="height: 5vh;"></div>
+        <div class="d-flex flex-column max-vh-70 justify-content-center mx-5">
+            <div class="row">
+                <div class="col-4">
+                    <canvas id="pdfCanvas"></canvas> <!-- Element to display PDF -->
+                </div>
+                <div class="col-8">
+                    <div class="row mb-3">
+                        <div class="d-flex bd-highlight">
+                            <div class=" flex-grow-1 bd-highlight" style="width: 40vw;"><h2><b>{{ document.title }}</b><span style="font-size: 20px;">&nbsp; &nbsp;<i class="fa-regular fa-pen-to-square"></i></span></h2></div>
+                            <div class=" bd-highlight"><!-- Add a button to view history-->
+                                <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#historyModal">
+                                    View History &nbsp;<span style="font-size: 20px"><i class="far fa-clock"></i></span>
+                                </button></div>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="d-grid">
+                            <!-- Add a button to redirect to detail.html to sign the document -->
+                            <a href="{% url 'esign:detail' document.pk %}" class="btn btn-success">View / Sign</a>
+                        </div>
+                    </div>
+                    <div class="row mb-3">
+                        <div class="col-6">
+                            <h3><b>Signer List</b></h3>
+                            <select class="form-select" id="signerListSelect" multiple aria-label="multiple select example" style="height: 32vh; border: 5px solid #333; font-size:20px;">
+                                
+                                    <!-- <option value="1"><b>One</b></option>
+                                    <option value="2">Two</option>
+                                    <option value="3">Three</option> -->
+                                    {% for signer in document.signers.all %}
+                                    <option value="{{ signer.id }}">{{ signer.first_name }} {{ signer.last_name }}</option>
+                                    {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-6">
+                            <div class="d-flex bd-highlight">
+                                <div class=" flex-grow-1 bd-highlight"><h3><b>Assign Signer</b></h3></div>
+                                <div class=" bd-highlight"><!-- Add a button to assign signer-->
+                                    <button type="button" id="assignButton" class="btn btn-primary px-5">
+                                        <b>Assign</b>
+                                    </button></div>
+                                    
+                            </div>
+                            
+                            <div class="container" style="height: 32vh; border: 5px solid #333; overflow-y: scroll;">
+                                <div class="row mt-4">
+                                    <div class="form-group">
+                                        <label for="company"><b>Company</b></label>
+                                        <select class="form-control" id="compSelect" multiple aria-label="multiple select example">
+                                            {% for company in companies %}
+                                                <option value="{{ company.pk }}">{{ company.name }}</option>
+                                            {% endfor %}
+                                    </select>
+                                        <!-- <input type="text" id="company" class="form-control" placeholder="Coffee Sdn Bhd" name="company" required> -->
+                                    </div>
+                                </div>
+                                <div class="row mt-4">
+                                    <div class="form-group">
+                                        <label for="name"><b>Name (E-mail)</b></label>
+                                        <select class="form-control" id="nameSelect" multiple aria-label="multiple select example">
+                                
+                                    </select>
+                                        <!-- <input type="text" id="name" class="form-control" placeholder="John Doe" name="name" required> -->
+                                    </div>
+                                </div>
+                                <!-- <div class="row mt-2">
+                                    <div class="form-group">
+                                        <label for="email"><b>E-mail<span style="color: red;"> *</span></b></label>
+                                        <select class="form-control" id="mailSelect" multiple aria-label="multiple select example">
+                                
+                                            <option value="1"><b>One</b></option>
+                                            <option value="2">Two</option>
+                                            <option value="3">Three</option>
+                                    </select> -->
+                                        <!-- <input type="text" id="email" class="form-control" placeholder="johndoe@doe.com" name="email" required> -->
+                                    <!-- </div>
+                                </div> -->
+                                <div class="row mt-4">
+                                    <div class="form-group">
+                                        <label for="role"><b>Role</b></label>
+                                        <select class="form-select" id="roleSelect"  aria-label=" select example" style="border:1px solid #aaa; color: grey;">
+                                            <option value="">Search for a role</option>
+                                            <option value="BOD">Board of Directors</option>
+                                            <option value="CS">Company Secretary</option>
+                                    </select>
+                                        <!-- <input type="text" id="role" class="form-control" placeholder="Role" name="role" required> -->
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="container">
+                            <h3><b>Remark</b></h3>
+                            <div class="container pt-2" style="height: 30vh; border: 5px solid #333;">
+                                <div class="container" style="height: 12vh; overflow-y: scroll;">
+                                    <div class="d-flex" style="height: fit-content;">
+                                        <div style="width: fit-content;">
+                                            {% load static %}
+                                            <img src="{% static "images/香格里拉 雪山 打光.jpg" %}" alt="" style="width: 60px; height: 60px; object-fit: cover;">
+                                        </div>
+                                        <div style="width: 95%; margin-left: 30px;">
+                                            <h6><b>Danny</b></h6>
+                                            <p>Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet </p>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex" style="height: fit-content;">
+                                        <div style="width: fit-content;">
+                                            {% load static %}
+                                            <img src="{% static "images/bg.jpg" %}" alt="" style="width: 60px; height: 60px; object-fit: cover;">
+                                        </div>
+                                        <div style="width: 95%; margin-left: 30px;">
+                                            <h6><b>Sammy</b></h6>
+                                            <p>Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet </p>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="form-group pt-3">
+                                    <textarea class="form-control" id="remark" rows="2" placeholder="Leave a message..." name="remark" required style="resize: none;"></textarea>
+                                </div>
+                                <div class="d-grid">
+                                    <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addRemarkModal">
+                                        <b>Submit</b>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div style="height: 5vh;" class="mt-3">
+            <div class="row">
+                <div class="col-4">
+                </div>
+                <div class="col-8">
+                    <div class="d-flex justify-content-center">
+                        <label for="expDate"><b>Expiry Date:&nbsp;</b></label>
+                    <input type="date" id="expDate" name="expDate" required>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+
+    <!-- Confirmation Modal -->
+<div class="modal fade" id="confirmationModal" tabindex="-1" role="dialog" aria-labelledby="confirmationModalLabel" aria-hidden="true" data-backdrop="static">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="confirmationModalLabel">Confirmation</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <!-- Confirmation message or additional information -->
+                Are you sure you want to proceed?
+            </div>
+            <div class="modal-footer">
+                <!-- Buttons to confirm or cancel -->
+                <button type="button" class="btn btn-secondary" id="cancelAction" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="confirmAction">Confirm</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+
+
+<!-- Include Bootstrap JS and jQuery -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+
+
+<!-- JavaScript -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+<script>
+    // Load and render the first page of the PDF document
+    const pdfUrl = '{{ document.pdf_file.url }}'; // Replace with the actual URL or path of your PDF document
+    const canvas = document.getElementById('pdfCanvas');
+    const context = canvas.getContext('2d');
+    const parentDiv = canvas.parentElement;
+
+    pdfjsLib.getDocument(pdfUrl).promise.then(function (pdf) {
+        pdf.getPage(1).then(function (page) {
+            const viewport = page.getViewport({ scale: 1 });
+            canvas.height = viewport.height;
+            canvas.width = parentDiv.clientWidth;
+            const scale = canvas.width / viewport.width;
+
+            const renderContext = {
+                canvasContext: context,
+                viewport: page.getViewport({ scale: scale }),
+            };
+            page.render(renderContext);
+        });
+    }).catch(function (error) {
+        console.error('Error loading PDF:', error);
+    });
+</script>
+
+<script>
+    $(document).ready(function () {
+            $('#compSelect').select2({
+                placeholder: 'Search for a company',
+                allowClear: true // Optional - adds a clear button
+            });
+
+            // Event listener for company selection change
+            $('#compSelect').on('change', function () {
+                var selectedCompany = $(this).val();
+                // console.log(typeof (selectedCompany));
+
+                // Make an AJAX request to fetch associated names and emails for the selected company
+                $.ajax({
+                    url: '/esign/get_names_emails/', // Replace with your server-side endpoint URL
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}' // Include the CSRF token here
+                    },
+                    data: {
+                        company_id: selectedCompany
+                    },
+                    traditional: true,
+                    success: function (response) {
+                        // Assuming the response contains options for names and emails
+                        var names = response.names;
+
+                        // Clear existing options
+                        $('#nameSelect').empty();
+                        //   $('#mailSelect').empty();
+
+                        // Populate name options
+                        names.forEach(function (name) {
+                            $('#nameSelect').append($('<option>', {
+                                value: name.value,
+                                text: name.text
+                            }));
+                        });
+
+                        // Trigger change event to update Select2 dropdown UI
+                        $('#nameSelect').trigger('change');
+                    },
+                    error: function (xhr, status, error) {
+                        console.error('Error fetching data:', error);
+                    }
+                });
+            });
+
+            $('#nameSelect').select2({
+                placeholder: 'Search for a name',
+                allowClear: true // Optional - adds a clear button
+            });
+
+            var signerNames = []; // Array to store signer names
+
+            // Function to update the signer list select element
+            function updateSignerList(selectedID) {
+
+                signerNames.push(selectedID); // Add selected name to the array
+            }
+
+
+            function getSignerList() {
+                // loop through the existed signer list option and store the names in an array
+                $('#signerListSelect option').each(function () {
+                    signerNames.push($(this).val());
+                });
+                console.log(signerNames);
+            }
+            getSignerList(); // Update the signer list
+            // write a funtion to loop through the existed signer list and check if the selected name is already in the list
+            // if yes, then alert the user and do not add the name to the list
+            // if no, then add the name to the list
+            // function checkSignerList() {
+            //     for (var i = 0; i < signerNames.length; i++) {
+            //         if (signerNames[i] === selectedName) {
+            //             alert('Signer already exists in the list!');
+            //         } else {
+            //             updateSignerList();
+            //         }
+            //     }
+            // }
+
+            //     selectedCompany = $('#compSelect').find('option:selected').text(); // Retrieve the text of the selected option
+            //     $('#compSelect').on('change', function() {
+            //     var selectedCompany = $(this).find('option:selected').text(); // Retrieve the text of the selected option
+            //     console.log(selectedCompany);
+
+            //     // Rest of your AJAX request and functionality...
+            // });
+
+            // Retrieve selected values for organization, name, and role
+            var selectedOrganization, selectedID, selectedName, selectedRole;
+
+            // Assuming the assign button has an ID of 'assignButton'
+            $('#assignButton').on('click', function () {
+                // Retrieve selected values for organization, name, and role
+                selectedOrganization = $('#compSelect').find('option:selected').text();
+                selectedID = $('#nameSelect').val();
+                selectedName = $('#nameSelect').find('option:selected').text();
+                selectedRole = $('#roleSelect').find('option:selected').text();
+                var execute = false;
+
+                console.log(signerNames);
+                console.log(selectedID);
+                // Check if all necessary fields are selected
+                if (selectedOrganization && selectedID && selectedRole) {
+
+                    $('#confirmationModal').modal('show');
+                } else {
+                    // Display an error message if all necessary fields are not selected
+                    alert('Please select organization, name, and role.');
+                }
+                    // Listen for confirmation within the modal
+                    // $('#cancelAction').on('click', function () {
+                    //     signerNames = [];
+                    // });
+
+                    // Listen for confirmation within the modal
+                    // $('#confirmAction').on('click', function () {
+
+                    //     // Create a string to represent the signer
+                    //     var signerInfo = selectedOrganization + ' (' + selectedName + ') ' + '(' + selectedRole + ')';
+                    //     var check = 0;
+                    //     if (signerNames.includes(selectedID[0])) {
+                    //         check = 1;
+                    //     }
+                        
+                    //     console.log(check);
+
+                    //     if (check === 1) {
+                    //         alert('Signer already exists in the list!');
+                    //     } else {
+                    //             // Add the signer to the signer list select element
+                    //             $('#signerListSelect').append($('<option>', {
+                    //                 value: selectedID,
+                    //                 text: signerInfo
+                    //             }));
+                    //             updateSignerList(selectedID);
+                    //     }
+                    //     // Close the modal
+                    //     $('#confirmationModal').modal('hide');
+
+                    //     // clear signerNames array
+                    //     signerNames = [];
+                    //     getSignerList();
+
+                    //     // Check if the signer is not already present in the signer list
+                    //     // if (signerNames.indexOf(selectedName) === -1) {
+                    //     //     // Add the signer to the signer list select element
+                    //     //     $('#signerListSelect').append($('<option>', {
+                    //     //         value: selectedName,
+                    //     //         text: signerInfo
+                    //     //     }));
+                    //     // } else {
+                    //     //     // Display a message indicating the signer is already in the list
+                    //     //     alert('Signer already exists in the list!');
+                    //     // }
+                    // });
+                // } else {
+                //     // Display an error message if all necessary fields are not selected
+                //     alert('Please select organization, name, and role.');
+                // }
+            });
+
+            // Listen for confirmation within the modal
+            $('#confirmAction').on('click', function () {
+
+// Create a string to represent the signer
+var signerInfo = selectedOrganization + ' (' + selectedName + ') ' + '(' + selectedRole + ')';
+var check = 0;
+if (signerNames.includes(selectedID[0])) {
+    check = 1;
+}
+
+console.log(check);
+
+if (check === 1) {
+    alert('Signer already exists in the list!');
+} else {
+        // Add the signer to the signer list select element
+        $('#signerListSelect').append($('<option>', {
+            value: selectedID,
+            text: signerInfo
+        }));
+        updateSignerList(selectedID);
+}
+// Close the modal
+$('#confirmationModal').modal('hide');
+
+// clear signerNames array
+signerNames = [];
+getSignerList();
+
+// Check if the signer is not already present in the signer list
+// if (signerNames.indexOf(selectedName) === -1) {
+//     // Add the signer to the signer list select element
+//     $('#signerListSelect').append($('<option>', {
+//         value: selectedName,
+//         text: signerInfo
+//     }));
+// } else {
+//     // Display a message indicating the signer is already in the list
+//     alert('Signer already exists in the list!');
+// }
+});
+        });
+  </script>
+
+</html>

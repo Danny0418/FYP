@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}"> -->
+    <!-- Add this in the head section of your HTML file -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <!-- Add this in the head section of your HTML file -->
+<!-- Use the latest version of idle-js from jsDelivr -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/idle-js@1.2.0/dist/Idle.min.js"></script> -->
+
+
+<!-- PDF.js CDN -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+<!-- <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.189/pdf_viewer.min.css"> -->
+
+<script>
+  // Set worker source for PDF.js
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.worker.min.js';
+</script>
+
+
+    <meta charset="UTF-8">
+    <title>Online Courses</title>
+    <script>
+      function checkSessionStatus() {
+          // Send an AJAX request to a Django view that checks the session status
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', '/esign/check_session/', true);
+          xhr.onreadystatechange = function () {
+              if (xhr.readyState === 4) {
+                  if (xhr.status === 200) {
+                      var response = JSON.parse(xhr.responseText);
+                      if (response.session_expired) {
+    
+                        // Create a new Bootstrap modal element
+                var modalHTML = `
+                  <div class="modal fade" id="sessionExpiredModal" tabindex="-1" role="dialog" aria-labelledby="sessionExpiredModalLabel" aria-hidden="true" data-backdrop="static">
+                    <div class="modal-dialog" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="sessionExpiredModalLabel">Session Expired</h5>
+                        </div>
+                        <div class="modal-body">
+                          Your session has expired. Please log in again.
+                        </div>
+                        <div class="modal-footer">
+                          <!-- Add any buttons or additional content here if needed -->
+                          <a href="/esign/login" class="btn btn-primary">Log In</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+    
+                // Set the body content to the modal HTML
+                document.body.innerHTML = modalHTML;
+    
+                // Show the Bootstrap modal
+                $('#sessionExpiredModal').modal('show');
+                          // Display an alert to the user
+    //             alert("Your session has expired. Please log in again.");
+    
+    // // Redirect the user to the login page
+    // window.location.href = '/esign/login';
+                      }
+                  } else {
+                      console.error('Error checking session status:', xhr.statusText);
+                  }
+              }
+          };
+          xhr.send();
+      }
+    
+      checkSessionStatus();
+      // Check the session status every 60 seconds (adjust as needed)
+      setInterval(checkSessionStatus, 60000);
+    </script>
+</head>
+<style>
+  /* CSS for Modal */
+.modal {
+  display: none;
+  position: fixed;
+  z-index: 1;
+  left: 0;
+  top: 0;
+  width: 100%;
+  height: 100%;
+  background-color: rgba(0,0,0,0.4);
+  overflow: scroll;
+}
+
+.modal-content {
+  background-color: #fefefe;
+  margin: 5% auto;
+  padding: 20px;
+  border: 1px solid #888;
+  width: 60%;
+}
+
+/* CSS for Modal Header */
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ccc;
+}
+
+.modal-title {
+  margin: 0;
+  text-align: center;
+  flex-grow: 1;
+}
+
+.close {
+  color: #aaa;
+  float: right;
+  font-size: 28px;
+  font-weight: bold;
+}
+
+.close:hover,
+.close:focus {
+  color: black;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+
+</style>
+
+<body>
+{% if user.is_authenticated %}
+{% block content %}
+ <h1>Documents</h1>
+ <ul>
+    {% for document in documents %}
+      <li><a href="{% url 'esign:management' document.pk %}">{{ document.title }}</a></li>
+    {% empty %}
+      <li>No PDFs available.</li>
+    {% endfor %}
+ </ul>
+{% endblock %}
+{% endif %}
+
+<button id="createButton" class="btn btn-primary" data-toggle="modal" data-target="#uploadModal">Create</button>
+
+<!-- Bootstrap Modal for PDF Upload -->
+<div class="modal" id="uploadModal">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title">Upload Document</h5>
+        <button type="button" class="close" data-dismiss="modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="file" id="fileInput" class="form-control-file">
+        <progress id="uploadProgress" value="0" max="100"></progress>
+        <div id="uploadMessage"></div>
+        <div id="errorMessage" class="text-danger" style="display: none;">Please upload a PDF file.</div>
+        <div id="successMessage" class="alert alert-success" style="display: none;">Upload successful!</div>
+        <canvas id="pdfCanvas"></canvas> <!-- Element to display PDF -->
+      </div>
+      <div class="modal-footer">
+        <button id="createDocumentBtn" class="btn btn-success" style="display: none;">Create Document</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+</body>
+
+<script>
+  // Get the modal
+const modal = document.getElementById("uploadModal");
+const errorMessage = document.getElementById("errorMessage");
+
+// Get the button that opens the modal
+const createButton = document.getElementById("createButton");
+const createDocumentBtn = document.getElementById("createDocumentBtn");
+
+// When the user clicks the button, open the modal
+createButton.addEventListener("click", function() {
+  modal.style.display = "block";
+});
+
+// When the user clicks on the close button, close the modal
+modal.querySelector(".close").addEventListener("click", function() {
+  modal.style.display = "none";
+});
+
+// Simulate file upload process
+document.getElementById("fileInput").addEventListener("change", function() {
+  const progressBar = document.getElementById("uploadProgress");
+  const uploadMessage = document.getElementById("uploadMessage");
+  const successMessage = document.getElementById("successMessage");
+
+  const file = this.files[0];
+  if (file) {
+    if (file.type === "application/pdf") {
+      errorMessage.style.display = "none";
+      // Continue with upload logic here
+      // Simulate upload progress
+    let progress = 0;
+    const interval = setInterval(function() {
+      progress += 10;
+      if (progress <= 100) {
+        progressBar.value = progress;
+      } else {
+        clearInterval(interval);
+      // Simulate successful upload with a delay
+      setTimeout(function() {
+        successMessage.style.display = "block";
+        createDocumentBtn.style.display = "block";
+        // Display the first page of the PDF
+        renderPDF(file);
+
+
+        setTimeout(function() {
+          successMessage.style.display = "none";
+        }, 5000); // Hide success message after 3 seconds
+      }, 2000);
+        setTimeout(function() {
+          // Display PDF details after delay
+          uploadMessage.innerText = `Title: ${file.name}`;
+          // Add logic to display PDF preview and create document button here
+        }, 2000); // 2 seconds delay
+      }
+    }, 500); // 0.5 seconds interval
+    } else {
+      errorMessage.style.display = "block";
+    }
+  }
+});
+
+// Render the PDF using PDF.js
+function renderPDF(file) {
+  const fileReader = new FileReader();
+  fileReader.onload = function(event) {
+    const pdfData = new Uint8Array(event.target.result);
+    
+    // Use PDF.js to render the PDF
+    pdfjsLib.getDocument({ data: pdfData }).promise.then(function(pdf) {
+      // Render the first page
+      pdf.getPage(1).then(function(page) {
+        const canvas = document.getElementById("pdfCanvas");
+        const context = canvas.getContext("2d");
+        const viewport = page.getViewport({ scale: 1.5 });
+        
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        page.render({
+          canvasContext: context,
+          viewport: viewport
+        });
+      });
+    });
+  };
+  fileReader.readAsArrayBuffer(file);
+}
+
+
+
+
+// Function to get the CSRF token from the cookie
+function getCSRFToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        .split('=')[1];
+    return cookieValue;
+}
+
+// Use the CSRF token in AJAX requests
+const csrftoken = getCSRFToken();
+
+// Event listener for "Create Document" button click
+createDocumentBtn.addEventListener("click", function() {
+  // Send the PDF file data to Django for saving
+  const file = document.getElementById("fileInput").files[0];
+  const formData = new FormData();
+  formData.append('pdf_file', file);
+
+  fetch('/esign/save_pdf_to_db/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': csrftoken  // Add the CSRF token to the request headers
+    },
+    body: formData
+  })
+  .then(response => {
+    if (response.ok) {
+      return response.json(); // Extract JSON data on success
+    } else {
+      throw new Error('File creation failed');
+    }
+  })
+  .then(data => {
+    const newestPrimaryKey = data.newest_pk; // Assuming the JSON response contains the newest primary key
+    if (newestPrimaryKey) {
+      window.location.href = `/esign/management/${newestPrimaryKey}/`; // Redirect with newest primary key
+    } else {
+      throw new Error('Primary key not found');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to create document');
+  });
+});
+
+</script>
+<!-- Include Bootstrap JS and jQuery -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+</html>

@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/course.css' %}">
+    {% load static %}
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+    <!-- Add this in the head section of your HTML file -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <!-- Add this in the head section of your HTML file -->
+<!-- Use the latest version of idle-js from jsDelivr -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/idle-js@1.2.0/dist/Idle.min.js"></script> -->
+
+
+    <meta charset="UTF-8">
+    <title>Online Courses</title>
+    <script>
+      function checkSessionStatus() {
+          // Send an AJAX request to a Django view that checks the session status
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', '/esign/check_session/', true);
+          xhr.onreadystatechange = function () {
+              if (xhr.readyState === 4) {
+                  if (xhr.status === 200) {
+                      var response = JSON.parse(xhr.responseText);
+                      if (response.session_expired) {
+    
+                        // Create a new Bootstrap modal element
+                var modalHTML = `
+                  <div class="modal fade" id="sessionExpiredModal" tabindex="-1" role="dialog" aria-labelledby="sessionExpiredModalLabel" aria-hidden="true" data-backdrop="static">
+                    <div class="modal-dialog" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="sessionExpiredModalLabel">Session Expired</h5>
+                        </div>
+                        <div class="modal-body">
+                          Your session has expired. Please log in again.
+                        </div>
+                        <div class="modal-footer">
+                          <!-- Add any buttons or additional content here if needed -->
+                          <a href="/esign/login" class="btn btn-primary">Log In</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+    
+                // Set the body content to the modal HTML
+                document.body.innerHTML = modalHTML;
+    
+                // Show the Bootstrap modal
+                $('#sessionExpiredModal').modal('show');
+                          // Display an alert to the user
+    //             alert("Your session has expired. Please log in again.");
+    
+    // // Redirect the user to the login page
+    // window.location.href = '/esign/login';
+                      }
+                  } else {
+                      console.error('Error checking session status:', xhr.statusText);
+                  }
+              }
+          };
+          xhr.send();
+      }
+    
+      checkSessionStatus();
+      // Check the session status every 60 seconds (adjust as needed)
+      setInterval(checkSessionStatus, 60000);
+    </script>
+</head>
+<body>
+  <!--Authentication section-->
+{% if user.is_authenticated %}
+    <div class="rightalign">
+        <div class="dropdown">
+            <button class="dropbtn">{{user.first_name}}</button>
+            <div class="dropdown-content">
+              <a href="{% url 'esign:logout' %}">Logout</a>
+            </div>
+        </div>
+    </div>
+    {% else %}
+    <div class="rightalign">
+        <div class="dropdown">
+            <form action="#" method="get">
+                <input class="dropbtn"  type="submit" value="Visitor">
+                <div class="dropdown-content">
+                    <a href="#">Signup</a>
+                    <a href="{% url 'esign:login' %}">Login</a>
+                </div>
+            </form>
+        </div>
+    </div>
+{% endif %}
+
+{% block content %}
+ <h1>{{ document.title }}</h1>
+ <p>{{ document.content|linebreaksbr }}</p>
+ <h2>Signatures</h2>
+ <ul>
+    {% for signature in signatures %}
+      <li>{{ signature.signed_at|date:"SHORT_DATETIME_FORMAT" }} - {{ signature.signature.url }}</li>
+    {% empty %}
+      <li>No signatures yet.</li>
+    {% endfor %}
+ </ul>
+ <!-- Display the PDF content using an iframe -->
+ <iframe src="{{ document.pdf_file.url }}" width="100%" height="70%" ></iframe>
+<!-- 
+ <head>
+  <title>Custom PDF Viewer</title>
+  <link rel="stylesheet" type="text/css" href="/path/to/pdfjs/web/viewer.css">
+</head>
+<body>
+  <h1>Custom PDF Viewer</h1>
+
+  <div id="pdf-container">
+      <div id="viewer" style="height: 500px;"></div>
+  </div>
+
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script type="text/javascript" src="/path/to/pdfjs/web/viewer.js"></script>
+
+  <script>
+      var pdfUrl = "{{ object.pdf_file.url }}";  // Replace with the actual URL
+
+      // Configure PDF.js viewer
+      var viewerContainer = document.getElementById('viewer');
+      var pdfViewer = new PDFViewer({ container: viewerContainer });
+      var pdfLinkService = new PDFLinkService();
+
+      pdfLinkService.setDocument(pdfUrl);
+      pdfViewer.setDocument(pdfUrl);
+
+      // Customize viewer options to restrict user actions
+      pdfViewer.preferences = {
+          showPreviousViewOnLoad: false,  // Disable previous view
+          showPrint: false,               // Disable printing
+          showCopy: false                 // Disable copying
+      };
+      pdfViewer.open(pdfUrl);
+
+      // Initialize viewer
+      pdfViewer.eventBus.dispatch('documentinit', { source: pdfViewer });
+  </script>
+</body> -->
+
+
+<!-- Bootstrap Modal for session expired alert -->
+<div class="modal fade" id="sessionExpiredModal" tabindex="-1" role="dialog" aria-labelledby="sessionExpiredModalLabel" aria-hidden="true">
+  <div class="modal-dialog" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="sessionExpiredModalLabel">Session Expired</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body">
+        Your session has expired. Please log in again.
+      </div>
+      <div class="modal-footer">
+        <!-- Add any buttons or additional content here if needed -->
+        <a href="/login" class="btn btn-primary">Log In</a>
+      </div>
+    </div>
+  </div>
+</div>
+ 
+{% endblock %}
+</body>
+
+<!-- Add this script at the end of your HTML file, before the closing body tag -->
+<!-- Add this script at the end of your HTML file, before the closing body tag -->
+
+
+<!-- Include Bootstrap JS and jQuery -->
+<script src="https://code.jquery.com/jquery-3.2.1.slim.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.12.9/umd/popper.min.js"></script>
+<script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+
+
+</html>
