@@ -14,6 +14,8 @@ urlpatterns = [
 
     path('management/<str:hashed_url>/', views.management, name='management'),
     path('update_document_title/<str:document_id>/', views.update_document_title, name='update_document_title'),
+    path('update_permission/', views.update_permission, name='update_permission'),
+    path('update_due/', views.update_due, name='update_due'),
 
     path('get_names_emails/', views.get_names_emails_for_company, name='get_names_emails'),
     path('detail/<str:pk>/', views.detail, name='detail'),

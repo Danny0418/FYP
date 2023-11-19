@@ -5,7 +5,8 @@ from .forms import *
 from django.utils import timezone
 from django.contrib.auth import login, logout, authenticate
 from django.http import JsonResponse
-import datetime
+from datetime import datetime
+from django.db.models import F
 
 def index(request):
     user_id = request.session['user_id']
@@ -120,26 +121,32 @@ def management(request, hashed_url):
     # Get all unique UserIDs from DocPermission
     permission = DocPermission.objects.filter(docID_id=url.docID_id)
     unique_user_ids = permission.values_list('userID_id', flat=True).distinct()
-    # userComp = DocPermission.objects.values_list('docID_id', flat=True).distinct()
-    # Get all CustomUser objects with the unique_user_ids
+
+    # Fetch all CustomUser objects with the unique_user_ids
     users = CustomUser.objects.filter(userID__in=unique_user_ids)
-    usernames = users.values_list('username', flat=True).distinct()
-    emails = users.values_list('email', flat=True).distinct()
-
-    userComp = CustomUser.objects.values_list('orgID_id', flat=True).distinct()
-    company = Organization.objects.filter(orgID__in=userComp)
-    comps = company.values_list('name', flat=True).distinct()
-
-    # roless = DocPermission.objects.filter(docID__in=url.docID_id, userID__in=unique_user_ids)
-    # roles = roless.values_list('type', flat=True).distinct()
-    # retrieve type from DocPermission based on userID
-    role = DocPermission.objects.filter(docID_id=url.docID_id, userID_id__in=unique_user_ids)
-    # role = roles.values_list('type', flat=True).distinct()
-
-
     
+    # Fetching companies corresponding to unique_user_ids
+    company_names = Organization.objects.filter(customuser__in=users).annotate(user_id=F('customuser__userID')).values_list('user_id', 'name').distinct()
 
-    user_data = zip(unique_user_ids, comps, usernames, emails, role)
+    # Creating a dictionary with user_id as keys and company names as values
+    user_company_names = {user_id: company_name for user_id, company_name in company_names}
+
+    # Fetching roles corresponding to unique_user_ids
+    role = DocPermission.objects.filter(docID_id=url.docID_id, userID_id__in=unique_user_ids)
+
+    user_data = []
+
+    for user_id in unique_user_ids:
+        comps = user_company_names.get(user_id, 'No Company')  # Get the company name or set a default value
+
+        # Fetching other user details as before
+        user_details = CustomUser.objects.get(userID=user_id)
+        username = user_details.username
+        email = user_details.email
+        role_for_user = role.filter(userID_id=user_id)
+
+        # Appending the user data to the user_data list
+        user_data.append((user_id, comps, username, email, role_for_user))
 
 
 
@@ -185,7 +192,41 @@ def update_document_title(request, document_id):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False})
 
+def update_due(request):
+    if request.method == 'POST':
+        new_due = request.POST.get('new_due')
+        document_id = request.POST.get('document_id')
+        document = Document.objects.get(pk=document_id)
 
+        # Assuming the new_due is in string format ('YYYY-MM-DDTHH:MM')
+        new_due_datetime = datetime.strptime(new_due, '%Y-%m-%dT%H:%M')
+
+        # Ensure new_due_datetime is timezone-aware
+        new_due_timezone = timezone.make_aware(new_due_datetime, timezone=timezone.utc)
+
+        # Set the document's due date to the adjusted time zone
+        document.due_date = new_due_timezone
+        document.save()
+
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False})
+
+def update_permission(request):
+    if request.method == 'POST':
+        user_id = request.POST.get('selectedID')
+        document_id = request.POST.get('document_id')
+        new_role = request.POST.get('selectedRole')
+        # Get the DocPermission object
+        # Create DocPermission object for the user
+        doc_permission = DocPermission(userID_id=user_id, docID_id=document_id, type=new_role)
+        doc_permission.save()
+
+        # Create URL object for the user
+        url = URL(docID_id=document_id, dpID_id=doc_permission.dpID, userID_id=user_id)
+        url.save()
+
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False})
 
 
 
