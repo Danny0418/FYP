@@ -134,6 +134,11 @@
 {% if user.is_authenticated %}
 {% block content %}
  <h1>Documents</h1>
+ {% if user_id %}
+        <p>User ID: {{ user_id }}</p>
+    {% else %}
+        <p>No user ID found in session.</p>
+    {% endif %}
  <ul>
     {% for document in documents %}
       <li><a href="{% url 'esign:management' document.pk %}">{{ document.title }}</a></li>
@@ -300,9 +305,9 @@ createDocumentBtn.addEventListener("click", function() {
     }
   })
   .then(data => {
-    const newestPrimaryKey = data.newest_pk; // Assuming the JSON response contains the newest primary key
-    if (newestPrimaryKey) {
-      window.location.href = `/esign/management/${newestPrimaryKey}/`; // Redirect with newest primary key
+    const newURL = data.newURL; // Assuming the JSON response contains the newest primary key
+    if (newURL) {
+      window.location.href = `/esign/management/${newURL}/`; // Redirect with newest primary key
     } else {
       throw new Error('Primary key not found');
     }

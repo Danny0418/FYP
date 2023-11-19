@@ -4,6 +4,7 @@ from django.core.exceptions import ValidationError
 from django.utils import timezone
 from django.contrib import admin
 import hashlib
+import datetime
 
 def validate_pdf_extension(value):
     if not value.name.endswith('.pdf'):
@@ -68,7 +69,8 @@ class CustomUser(AbstractUser):
 class DocPermission(models.Model):
     dpID = models.CharField(max_length=6, primary_key=True)
     userID = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    # docID = models.ForeignKey('Document', on_delete=models.CASCADE)
+    docID = models.ForeignKey('Document', on_delete=models.CASCADE)
+    # docID = models.CharField(max_length=6, null=True, blank=True)
     type = models.CharField(max_length=50)
 
     def save(self, *args, **kwargs):
@@ -134,8 +136,14 @@ class Document(models.Model):
         validators=[validate_pdf_extension],
         default=default_pdf_path
     )
+    created_date = models.DateTimeField(auto_now_add=True)
+    due_date = models.DateTimeField()
 
     def save(self, *args, **kwargs):
+        if not self.due_date:
+            # Set a very old date if due_date is not set
+            self.due_date = datetime.datetime(1900, 1, 1)  # Set to January 1, 1900 as an example
+
         if not self.docID:
             # Get the latest organization
             latest_doc = Document.objects.order_by('-docID').first()
@@ -157,3 +165,39 @@ class Signature(models.Model):
     docID = models.ForeignKey('Document', on_delete=models.CASCADE)
     signature = models.ImageField(upload_to='signatures')
     signed_at = models.DateTimeField(auto_now_add=True)
+
+
+
+class Test(models.Model):
+    docID = models.CharField(max_length=6, primary_key=True)
+    title = models.CharField(max_length=255)
+    pdf_file = models.FileField(
+        upload_to='pdfs/',
+        validators=[validate_pdf_extension],
+        default=default_pdf_path
+    )
+    created_date = models.DateTimeField(auto_now_add=True)
+    due_date = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.due_date:
+            # Set a very old date if due_date is not set
+            self.due_date = datetime(1900, 1, 1)  # Set to January 1, 1900 as an example
+
+
+        if not self.docID:
+            # Get the latest organization
+            latest_doc = Document.objects.order_by('-docID').first()
+
+            if latest_doc:
+                # Extract the numeric part, increment, and format the new ID
+                new_id = int(latest_doc.docID[3:]) + 1
+                self.docID = 'DOC' + str(new_id).zfill(3)
+            else:
+                # If there are no organizations, start with COM001
+                self.docID = 'DOC001'
+
+        super(Test, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title

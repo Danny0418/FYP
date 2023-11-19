@@ -1,14 +1,16 @@
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse
 from .models import *
 from .forms import *
 from django.utils import timezone
 from django.contrib.auth import login, logout, authenticate
 from django.http import JsonResponse
+import datetime
 
 def index(request):
+    user_id = request.session['user_id']
     documents = Document.objects.all()
-    return render(request, 'esign/index.html', {'documents': documents})
+    return render(request, 'esign/index.html', {'documents': documents, 'user_id': user_id})
 
 def login_request(request):
     context = {}
@@ -22,6 +24,9 @@ def login_request(request):
         if user is not None:
             # If user is valid, call login method to login current user
             login(request, user)
+            # Set session for logged-in user ID
+            request.session['user_id'] = user.userID
+            user_id = request.session['user_id']
             return redirect('esign:index')
         else:
             # Check for the presence of the 'logout' query parameter
@@ -54,9 +59,14 @@ def check_session(request):
     session_expired = not request.user.is_authenticated
     return JsonResponse({'session_expired': session_expired})
 
+def handler403(request, exception, template_name='403.html'):
+    return render(request, template_name, status=403)
+
 def handler404(request, exception, template_name='404.html'):
     return render(request, template_name, status=404)
 
+def handler500(request, template_name='500.html'):
+    return render(request, template_name, status=500)
 
 
 
@@ -67,11 +77,75 @@ def save_pdf_to_db(request):
         # Example code for saving the file to a Document model
         document = Document(title=pdf_file, pdf_file=pdf_file)
         document.save()
+
+        user_id = request.session['user_id']
+        # Create DocPermission object for the user
+        doc_permission = DocPermission(userID_id=user_id, docID_id=document.docID, type='Owner')
+        doc_permission.save()
+
+        # Create URL object for the user
+        url = URL(docID_id=document.docID, dpID_id=doc_permission.dpID, userID_id=user_id)
+        url.save()
         
         # Return the primary key of the newly created document as JSON
-        return JsonResponse({'newest_pk': document.pk})
+        return JsonResponse({'newURL': url.url})
     else:
         return JsonResponse({'error': 'File upload failed'}, status=400)
+
+
+
+    
+###########     MANAGEMENT     ###########
+
+def management(request, hashed_url):
+    user_id = request.session['user_id']
+    url = URL.objects.get(url=hashed_url)
+    # Check if the hashed_url exists in the database
+    if not url:
+        return render(request, '404.html', status=404)
+    
+    # Check if the user is authorized to view the document
+    if url.userID_id != user_id:
+        return render(request, '403.html', status=403)
+        # document = Document.objects.get(pk=url.docID_id)
+        # return render(request, 'esign/test.html', {'url': url.userID_id, 'document': document, 'user_id': user_id})
+    
+    # Get the document object from the database
+    document = Document.objects.get(pk=url.docID_id)
+    docID = document.docID
+    docCreate = document.created_date.strftime('%Y-%m-%dT%H:%M')
+    docDue = document.due_date.strftime('%Y-%m-%dT%H:%M')
+    # permission = DocPermission.objects.filter(docID_id=url.docID_id)
+
+    # Get all unique UserIDs from DocPermission
+    permission = DocPermission.objects.filter(docID_id=url.docID_id)
+    unique_user_ids = permission.values_list('userID_id', flat=True).distinct()
+    # userComp = DocPermission.objects.values_list('docID_id', flat=True).distinct()
+    # Get all CustomUser objects with the unique_user_ids
+    users = CustomUser.objects.filter(userID__in=unique_user_ids)
+    usernames = users.values_list('username', flat=True).distinct()
+    emails = users.values_list('email', flat=True).distinct()
+
+    userComp = CustomUser.objects.values_list('orgID_id', flat=True).distinct()
+    company = Organization.objects.filter(orgID__in=userComp)
+    comps = company.values_list('name', flat=True).distinct()
+
+    # roless = DocPermission.objects.filter(docID__in=url.docID_id, userID__in=unique_user_ids)
+    # roles = roless.values_list('type', flat=True).distinct()
+    # retrieve type from DocPermission based on userID
+    role = DocPermission.objects.filter(docID_id=url.docID_id, userID_id__in=unique_user_ids)
+    # role = roles.values_list('type', flat=True).distinct()
+
+
+    
+
+    user_data = zip(unique_user_ids, comps, usernames, emails, role)
+
+
+
+    companies = Organization.objects.all()  # Fetch all companies from the database
+    return render(request, 'esign/manage.html', {'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'companies': companies, 'user_id': user_id})
+
 
 
 def get_names_emails_for_company(request):
@@ -99,13 +173,22 @@ def get_names_emails_for_company(request):
         return JsonResponse({'names': names})
     else:
         return JsonResponse({'error': 'Company ID not provided'})
-    
 
 
-def management(request, pk):
-    document = Document.objects.get(pk=pk)
-    companies = Organization.objects.all()  # Fetch all companies from the database
-    return render(request, 'esign/manage.html', {'document': document, 'companies': companies})
+
+def update_document_title(request, document_id):
+    if request.method == 'POST':
+        new_title = request.POST.get('new_title')
+        document = Document.objects.get(pk=document_id)
+        document.title = new_title
+        document.save()
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False})
+
+
+
+
+
 
 def detail(request, pk):
     document = Document.objects.get(pk=pk)

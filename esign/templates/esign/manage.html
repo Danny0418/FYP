@@ -87,13 +87,22 @@
         <div style="height: 5vh;"></div>
         <div class="d-flex flex-column max-vh-70 justify-content-center mx-5">
             <div class="row">
-                <div class="col-4">
+                <div class="col-4" id="pdfContainer" data-document-id="{{ docID }}">
                     <canvas id="pdfCanvas"></canvas> <!-- Element to display PDF -->
                 </div>
                 <div class="col-8">
                     <div class="row mb-3">
                         <div class="d-flex bd-highlight">
-                            <div class=" flex-grow-1 bd-highlight" style="width: 40vw;"><h2><b>{{ document.title }}</b><span style="font-size: 20px;">&nbsp; &nbsp;<i class="fa-regular fa-pen-to-square"></i></span></h2></div>
+                            <div class="flex-grow-1 bd-highlight" style="width: 40vw;">
+                                <h2>
+                                    <span id="editableTitle" style="cursor: pointer;">
+                                        <b>{{ document.title }}</b>
+                                        <span style="font-size: 20px;">&nbsp; &nbsp;<i class="fa-regular fa-pen-to-square edit-icon"></i></span>
+                                    </span>
+                                </h2>
+                                <input type="text" id="editTitleInput" style="display: none;">
+                            </div>
+                            
                             <div class=" bd-highlight"><!-- Add a button to view history-->
                                 <button type="button" class="btn" data-bs-toggle="modal" data-bs-target="#historyModal">
                                     View History &nbsp;<span style="font-size: 20px"><i class="far fa-clock"></i></span>
@@ -109,13 +118,9 @@
                     <div class="row mb-3">
                         <div class="col-6">
                             <h3><b>Signer List</b></h3>
-                            <select class="form-select" id="signerListSelect" multiple aria-label="multiple select example" style="height: 32vh; border: 5px solid #333; font-size:20px;">
-                                
-                                    <!-- <option value="1"><b>One</b></option>
-                                    <option value="2">Two</option>
-                                    <option value="3">Three</option> -->
-                                    {% for signer in document.signers.all %}
-                                    <option value="{{ signer.id }}">{{ signer.first_name }} {{ signer.last_name }}</option>
+                            <select class="form-select" id="signerListSelect" multiple aria-label="multiple select example" style="height: 32vh; border: 5px solid #333; font-size:20px; overflow: scroll;">
+                                    {% for user_id, comps, username, emails, role in user_data %}
+                                        <option value="{{ user_id }}">{{ comps }} ({{ username }})  ({{ emails }}) ({{ role.type }})</option>
                                     {% endfor %}
                             </select>
                         </div>
@@ -167,6 +172,7 @@
                                         <label for="role"><b>Role</b></label>
                                         <select class="form-select" id="roleSelect"  aria-label=" select example" style="border:1px solid #aaa; color: grey;">
                                             <option value="">Search for a role</option>
+                                            <option value="Owner">Owner</option>
                                             <option value="BOD">Board of Directors</option>
                                             <option value="CS">Company Secretary</option>
                                     </select>
@@ -223,7 +229,7 @@
                 <div class="col-8">
                     <div class="d-flex justify-content-center">
                         <label for="expDate"><b>Expiry Date:&nbsp;</b></label>
-                    <input type="date" id="expDate" name="expDate" required>
+                    <input type="datetime-local" id="expDate" name="expDate" value="{{ docDue }}"  min="{{ docCreate }}">
                     </div>
                 </div>
             </div>
@@ -498,5 +504,60 @@ getSignerList();
 });
         });
   </script>
+
+<script>
+    $(document).ready(function() {
+        $(".edit-icon").click(function() {
+            $("#editableTitle").hide();
+            $("#editTitleInput").val($("#editableTitle b").text()).show().focus();
+        });
+    
+        var isEventProcessed = false; // Flag to track event processing
+
+$("#editTitleInput").on('blur keypress', function(event) {
+    if (event.type === 'blur' || (event.type === 'keypress' && event.which === 13)) {
+        if (!isEventProcessed) { // Check if the event has already been processed
+            isEventProcessed = true; // Set the flag to true to indicate event processing
+            var newTitle = $(this).val();
+            if (newTitle.trim() !== "") {
+                $("#editableTitle b").text(newTitle);
+
+                // AJAX call to update the document title in the database
+                var documentId = $('#pdfContainer').data('document-id'); // Replace with the actual document ID
+                console.log(documentId);
+                $.ajax({
+                    type: 'POST',
+                    url: `/esign/update_document_title/${documentId}/`,
+                    data: {
+                        new_title: newTitle,
+                        csrfmiddlewaretoken: '{{ csrf_token }}', // Include CSRF token
+                    },
+                    dataType: 'json',
+                    success: function(response) {
+                        if (response.success) {
+                            // Handle success if needed
+                            alert('Document title updated successfully!');
+                        } else {
+                            // Handle failure if needed
+                            alert('Error updating document title!');
+                        }
+                    },
+                    error: function(xhr, errmsg, err) {
+                        // Handle error if needed
+                        alert('Error updating document title!');
+                    },
+                    complete: function() {
+                        isEventProcessed = false; // Reset the flag after completing the AJAX call
+                    }
+                });
+            }
+            $(this).hide();
+            $("#editableTitle").show();
+        }
+    }
+});
+    });
+    </script>
+    
 
 </html>
