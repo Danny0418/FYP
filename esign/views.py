@@ -9,6 +9,8 @@ from datetime import datetime
 from django.db.models import F
 
 def index(request):
+    if not request.user.is_authenticated:
+        return render(request, 'esign/xlogin.html')
     user_id = request.session['user_id']
     documents = Document.objects.all()
     return render(request, 'esign/index.html', {'documents': documents, 'user_id': user_id})
@@ -99,6 +101,8 @@ def save_pdf_to_db(request):
 ###########     MANAGEMENT     ###########
 
 def management(request, hashed_url):
+    if not request.user.is_authenticated:
+        return render(request, 'esign/xlogin.html')
     user_id = request.session['user_id']
     url = URL.objects.get(url=hashed_url)
     # Check if the hashed_url exists in the database
@@ -232,6 +236,8 @@ def update_permission(request):
 
 
 def detail(request, pk):
+    if not request.user.is_authenticated:
+        return render(request, 'esign/xlogin.html')
     document = Document.objects.get(pk=pk)
     signatures = Signature.objects.filter(docID=document)
     return render(request, 'esign/detail.html', {'document': document, 'signatures': signatures})
