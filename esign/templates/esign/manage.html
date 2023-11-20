@@ -609,17 +609,26 @@
                         var successMessage = 'Signer list updated successfully! '
 
                         // Show Bootstrap success modal
-                        var successModal = $('<div class="alert alert-success alert-dismissible fade show" role="alert" id="roleUpdateAlert">' +
+                        var successModal = $('<div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true" data-backdrop="static">' +
+                            '<div class="modal-dialog" role="document">' +
+                            '<div class="modal-content bg-success">' + // Set the background color to light green
+                            '<div class="modal-header">' +
+                            '<h5 class="modal-title text-white" id="successModalLabel">Success</h5>' +
+                            '</div>' +
+                            '<div class="modal-body text-white">' + // Set the text color to white
                             successMessage +
-                            '<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>' +
+                            '</div>' +
+                            '</div>' +
+                            '</div>' +
                             '</div>');
 
                         $('body').append(successModal);
-                        $('#roleUpdateAlert').alert();
+                        $('#successModal').modal('show');
 
-                        // Auto-close the alert after 5 seconds
-                        setTimeout(function() {
-                            $('#roleUpdateAlert').alert('close');
+                        // Close the success modal after 5 seconds
+                        setTimeout(function () {
+                            $('#successModal').modal('hide');
+                            successModal.remove();
                         }, 5000);
 
                         // Add the signer to the signer list select element
@@ -684,7 +693,7 @@
 
                         // AJAX call to update the document title in the database
                         var documentId = $('#pdfContainer').data('document-id'); // Replace with the actual document ID
-                        console.log(documentId);
+                        
                         $.ajax({
                             type: 'POST',
                             url: `/esign/update_document_title/${documentId}/`,
@@ -695,8 +704,31 @@
                             dataType: 'json',
                             success: function (response) {
                                 if (response.success) {
-                                    // Handle success if needed
-                                    alert('Document title updated successfully!');
+                                    // Display a success message to the user
+                        var successMessage = 'Document title updated successfully! '
+
+                        // Show Bootstrap success modal
+                        var successModal = $('<div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true" data-backdrop="static">' +
+                            '<div class="modal-dialog" role="document">' +
+                            '<div class="modal-content bg-success">' + // Set the background color to light green
+                            '<div class="modal-header">' +
+                            '<h5 class="modal-title text-white" id="successModalLabel">Success</h5>' +
+                            '</div>' +
+                            '<div class="modal-body text-white">' + // Set the text color to white
+                            successMessage +
+                            '</div>' +
+                            '</div>' +
+                            '</div>' +
+                            '</div>');
+
+                        $('body').append(successModal);
+                        $('#successModal').modal('show');
+
+                        // Close the success modal after 5 seconds
+                        setTimeout(function () {
+                            $('#successModal').modal('hide');
+                            successModal.remove();
+                        }, 5000);
                                 } else {
                                     // Handle failure if needed
                                     alert('Error updating document title!');
