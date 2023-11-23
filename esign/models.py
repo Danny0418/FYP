@@ -43,6 +43,7 @@ class CustomUser(AbstractUser):
     userID = models.CharField(max_length=6, primary_key=True)
     orgID = models.ForeignKey(Organization, on_delete=models.CASCADE)
     position = models.CharField(max_length=50)
+    MFA = models.BooleanField(default=True)
 
     # Add related_name to avoid clashes
     groups = models.ManyToManyField(Group, related_name='custom_user_set', blank=True)
@@ -65,7 +66,42 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.username
-    
+
+class Document(models.Model):
+    docID = models.CharField(max_length=6, primary_key=True)
+    title = models.CharField(max_length=255)
+    pdf_file = models.FileField(
+        upload_to='pdfs/',
+        validators=[validate_pdf_extension],
+        default=default_pdf_path
+    )
+    created_date = models.DateTimeField(auto_now_add=True)
+    due_date = models.DateTimeField()
+
+    def save(self, *args, **kwargs):
+        if not self.due_date:
+            # Set a very old date if due_date is not set
+            self.due_date = datetime.datetime(1900, 1, 1)  # Set to January 1, 1900 as an example
+
+        if not self.docID:
+            # Get the latest organization
+            latest_doc = Document.objects.order_by('-docID').first()
+
+            if latest_doc:
+                # Extract the numeric part, increment, and format the new ID
+                new_id = int(latest_doc.docID[3:]) + 1
+                self.docID = 'DOC' + str(new_id).zfill(3)
+            else:
+                # If there are no organizations, start with COM001
+                self.docID = 'DOC001'
+
+        super(Document, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title
+
+
+
 class DocPermission(models.Model):
     dpID = models.CharField(max_length=6, primary_key=True)
     userID = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
@@ -127,39 +163,28 @@ class URL(models.Model):
 
         super(URL, self).save(*args, **kwargs)
 
-
-class Document(models.Model):
-    docID = models.CharField(max_length=6, primary_key=True)
-    title = models.CharField(max_length=255)
-    pdf_file = models.FileField(
-        upload_to='pdfs/',
-        validators=[validate_pdf_extension],
-        default=default_pdf_path
-    )
-    created_date = models.DateTimeField(auto_now_add=True)
-    due_date = models.DateTimeField()
+class Remark(models.Model):
+    remarkID = models.CharField(max_length=6, primary_key=True)
+    docID = models.ForeignKey('Document', on_delete=models.CASCADE)
+    userID = models.ForeignKey('CustomUser', on_delete=models.CASCADE)
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
-        if not self.due_date:
-            # Set a very old date if due_date is not set
-            self.due_date = datetime.datetime(1900, 1, 1)  # Set to January 1, 1900 as an example
+        if not self.remarkID:
+            # Get the latest remark
+            latest_remark = Remark.objects.order_by('-remarkID').first()
 
-        if not self.docID:
-            # Get the latest organization
-            latest_doc = Document.objects.order_by('-docID').first()
-
-            if latest_doc:
+            if latest_remark:
                 # Extract the numeric part, increment, and format the new ID
-                new_id = int(latest_doc.docID[3:]) + 1
-                self.docID = 'DOC' + str(new_id).zfill(3)
+                new_id = int(latest_remark.remarkID[3:]) + 1
+                self.remarkID = 'REM' + str(new_id).zfill(3)
             else:
-                # If there are no organizations, start with COM001
-                self.docID = 'DOC001'
+                # If there are no remarks, start with REM001
+                self.remarkID = 'REM001'
 
-        super(Document, self).save(*args, **kwargs)
+        super(Remark, self).save(*args, **kwargs)
 
-    def __str__(self):
-        return self.title
 
 class Signature(models.Model):
     docID = models.ForeignKey('Document', on_delete=models.CASCADE)

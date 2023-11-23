@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="en">
+  <head>
+  	<title>Login 10</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+	<link href="https://fonts.googleapis.com/css?family=Lato:300,400,700&display=swap" rel="stylesheet">
+
+	<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/font-awesome/4.7.0/css/font-awesome.min.css">
+	
+    {% load static %}
+	<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+
+    <style>
+        .countdown-wrapper {
+            margin-top: 20px;
+        }
+
+        #countdownTimer {
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .countdown-wrapper {
+    display: flex;
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
+    margin-top: 20px; /* Adjust the margin top as needed */
+}
+    </style>
+
+	</head>
+	<body class="img js-fullheight" style="background-image: url('{% static "images/bg.jpg" %}');">
+
+	<section class="ftco-section">
+		<div class="container">
+			<div class="row justify-content-center">
+				<div class="col-md-6 col-lg-4">
+					<div class="login-wrap p-0">
+		      	<h3 class="mb-4 text-center"><b>TOTP Verification</b></h3>
+                
+                  
+
+		      	<form action="{% url 'esign:verify_totp' %}" method="POST">
+                    {% csrf_token %}
+                    <input type="hidden" name="user_id" value="{{ user_id }}">
+                    <div class="form-group">
+                        <label for="totp_code"> Enter OTP Code ({{ totp_code }})</label>
+                        <input type="text" class="form-control" id="totp_code" name="totp_code" placeholder="OTP Code" required>
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="form-control btn btn-primary submit px-3">Verify TOTP</button>
+                    </div>
+                </form>
+
+                <div class="countdown-wrapper">
+                    <div id="countdownTimer">
+                        <span id="countdown">60</span>&nbsp; &nbsp;
+                        
+                    </div>
+                    <a href="#" id="resendTOTP"><b>Resend TOTP</b></a>
+                </div>
+	          
+		      </div>
+				</div>
+			</div>
+		</div>
+	</section>
+
+
+	<script src="{% static 'js/jquery.min.js' %}"></script>
+    <script src="{% static 'js/popper.js' %}"></script>
+    <script src="{% static 'js/bootstrap.min.js' %}"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+
+    <script>
+        // Countdown timer logic
+        let seconds = 60; // Set the countdown duration
+        let countdownInterval; // To store the interval
+
+        const countdown = document.getElementById('countdown');
+        const resendLink = document.getElementById('resendTOTP');
+    
+        function updateCountdown() {
+            seconds--;
+            if (seconds > 0) {
+                countdown.innerHTML = seconds + ' seconds remaining';
+            } else {
+                // Hide the countdown when time ends
+                countdown.innerHTML = 'Code expired !';
+                clearInterval(countdownInterval); // Clear interval when time ends
+            }
+        }
+
+        function resendTOTP() {
+        const user_id = "{{ user_id }}";  // Get the user ID
+        const email = "b77968890@gmail.com";  // Modify with the email you want to send TOTP to
+        
+        fetch('/esign/resend_totp/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',  // Change content type
+                'X-CSRFToken': '{{ csrf_token }}'
+            },
+            body: new URLSearchParams({ email: email, user_id: user_id })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Resend successful, update countdown and display it
+                seconds = 60;
+                countdown.innerHTML = seconds + ' seconds remaining     ';
+                document.getElementById('countdownTimer').style.display = 'block';
+                clearInterval(countdownInterval);
+                countdownInterval = setInterval(updateCountdown, 1000);
+                alert(data.message); // Show success message
+            } else {
+                // Handle error
+                alert(data.message); // Show error message
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred.'); // Show a generic error message
+        });
+    }
+    
+        // Start the countdown when the page loads
+    document.addEventListener('DOMContentLoaded', function() {
+        countdownInterval = setInterval(updateCountdown, 1000);
+        
+        // Add event listener to resend link
+        resendLink.addEventListener('click', function(event) {
+            event.preventDefault(); // Prevent default link behavior
+            resendTOTP();
+        });
+    });
+    </script>
+
+	</body>
+</html>

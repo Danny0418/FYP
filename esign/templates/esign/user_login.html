@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en">
   <head>
-  	<title>Login 10</title>
+  	<title>Login</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
 
@@ -13,7 +13,6 @@
 	<link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
 
 	</head>
-    {% load static %}
 	<body class="img js-fullheight" style="background-image: url('{% static "images/香格里拉 雪山 打光.jpg" %}');">
 
 	<section class="ftco-section">
@@ -23,9 +22,22 @@
 					<div class="login-wrap p-0">
 		      	<h3 class="mb-4 text-center"><b>Member Login</b></h3>
 		      	<form action="{% url 'esign:login' %}" class="signin-form" method="POST">
+					{% if error %}
+<div class="alert alert-danger" role="alert">
+    {{ error }}
+</div>
+{% endif %}
+
+					{% if messages %}
+    {% for message in messages %}
+        <div class="alert alert-danger" role="alert">
+            {{ message }}
+        </div>
+    {% endfor %}
+{% endif %}
                     {% csrf_token %}
 		      		<div class="form-group">
-		      			<input type="text" class="form-control" placeholder="Member ID" name="username" required>
+		      			<input type="text" class="form-control" placeholder="Member ID" name="UID" required>
 		      		</div>
 	            <div class="form-group">
 	              <input id="password-field" type="password" class="form-control" placeholder="Password" name="psw" required>
@@ -83,27 +95,3 @@
 
 	</body>
 </html>
-
-<!-- <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    {% load static %}
-    <link rel="stylesheet" type="text/css" href="{% static 'css/course.css' %}">
-</head>
-<body> -->
-<!--- Add a login form here  --->
-<!-- <form action="{% url 'esign:login' %}"  method="post">
-    {% csrf_token %}
-    <div class="container">
-      <h1>Login</h1>
-      <label for="username"><b>User Name</b></label>
-      <input type="text" placeholder="Enter User Name: " name="username" required>
-      <label for="psw"><b>Password</b></label>
-      <input type="password" placeholder="Enter Password: " name="psw" required>
-      <div>
-        <button class="button" type="submit">Login</button>
-      </div>
-    </div>
-  </form>
-</body> -->

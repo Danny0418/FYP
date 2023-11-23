@@ -143,8 +143,8 @@
                             <div class="container" style="height: 32vh; border: 5px solid #333; overflow-y: scroll;">
                                 <div class="row mt-4">
                                     <div class="form-group">
-                                        <label for="company"><b>Company</b></label>
-                                        <select class="form-control" id="compSelect" multiple aria-label="multiple select example">
+                                        <label for="compSelect"><b>Company</b></label>
+                                        <select class="form-control" id="compSelect" multiple aria-label="select example">
                                             {% for company in companies %}
                                                 <option value="{{ company.pk }}">{{ company.name }}</option>
                                             {% endfor %}
@@ -154,8 +154,8 @@
                                 </div>
                                 <div class="row mt-4">
                                     <div class="form-group">
-                                        <label for="name"><b>Name (E-mail)</b></label>
-                                        <select class="form-control" id="nameSelect" multiple aria-label="multiple select example">
+                                        <label for="nameSelect"><b>Name (E-mail)</b></label>
+                                        <select class="form-control" id="nameSelect" multiple aria-label="select example">
                                 
                                     </select>
                                         <!-- <input type="text" id="name" class="form-control" placeholder="John Doe" name="name" required> -->
@@ -175,7 +175,7 @@
                                 </div> -->
                                 <div class="row mt-4">
                                     <div class="form-group">
-                                        <label for="role"><b>Role</b></label>
+                                        <label for="roleSelect"><b>Role</b></label>
                                         <select class="form-select" id="roleSelect"  aria-label=" select example" style="border:1px solid #aaa; color: grey;">
                                             <option value="" selected disabled>Search for a role</option>
                                             <option value="Owner">Owner</option>
@@ -193,32 +193,31 @@
                             <h3><b>Remark</b></h3>
                             <div class="container pt-2" style="height: 30vh; border: 5px solid #333;">
                                 <div class="container" style="height: 12vh; overflow-y: scroll;">
-                                    <div class="d-flex" style="height: fit-content;">
-                                        <div style="width: fit-content;">
-                                            {% load static %}
-                                            <img src="{% static "images/香格里拉 雪山 打光.jpg" %}" alt="" style="width: 60px; height: 60px; object-fit: cover;">
+                                    {% load static %}
+                                    {% if remark_data %}
+                                    {% for remark_info in remark_data %}
+                                        <div class="d-flex pt-4" style="height: fit-content;">
+                                            <div style="width: fit-content;">
+                                                <img src="{% static "images/香格里拉 雪山 打光.jpg" %}" alt="" style="width: 60px; height: 60px; object-fit: cover;">
+                                            </div>
+                                            <div style="width: 95%; margin-left: 30px;">
+                                                
+                                                    <h6><b>{{ remark_info.username  }}</b><span style="color:grey; margin-left: 50px;">{{ remark_info.created_date }}</span></h6>
+                                                    <p>{{ remark_info.content  }}</p>
+                                                
+                                            </div>
+                                            
                                         </div>
-                                        <div style="width: 95%; margin-left: 30px;">
-                                            <h6><b>Danny</b></h6>
-                                            <p>Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet </p>
-                                        </div>
-                                    </div>
-                                    <div class="d-flex" style="height: fit-content;">
-                                        <div style="width: fit-content;">
-                                            {% load static %}
-                                            <img src="{% static "images/bg.jpg" %}" alt="" style="width: 60px; height: 60px; object-fit: cover;">
-                                        </div>
-                                        <div style="width: 95%; margin-left: 30px;">
-                                            <h6><b>Sammy</b></h6>
-                                            <p>Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet Lorem ipsum dolor sit amet </p>
-                                        </div>
-                                    </div>
+                                        {% endfor %}
+                                        {% else %}
+                                        <p>No remarks available.</p>
+                                    {% endif %}
                                 </div>
                                 <div class="form-group pt-3">
                                     <textarea class="form-control" id="remark" rows="2" placeholder="Leave a message..." name="remark" required style="resize: none;"></textarea>
                                 </div>
                                 <div class="d-grid">
-                                    <button type="button" class="btn btn-primary mt-3" data-bs-toggle="modal" data-bs-target="#addRemarkModal">
+                                    <button type="button" class="btn btn-primary mt-3" id="submitRemarkBtn">
                                         <b>Submit</b>
                                     </button>
                                 </div>
@@ -751,5 +750,50 @@
     });
     </script>
     
+    <script>
+        // Function to get the CSRF token from the cookie
+function getCSRFToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        .split('=')[1];
+    return cookieValue;
+}
+
+// Use the CSRF token in AJAX requests
+const csrftoken = getCSRFToken();
+
+        $(document).ready(function () {
+            $('#submitRemarkBtn').click(function () {
+                // Get the remark content and document ID
+                var remarkContent = $('#remark').val();
+    
+                // Prepare the data to be sent to the server
+                var formData = {
+                    remark: remarkContent,
+                    doc_id: '{{docID}}'
+                };
+    
+                // Send an AJAX request to add the remark
+                $.ajax({
+                    type: 'POST',
+                    url: '/esign/add_remark/', // Replace with your backend endpoint URL
+                    headers: {
+      'X-CSRFToken': csrftoken  // Add the CSRF token to the request headers
+    },
+                    data: formData,
+                    success: function (response) {
+                        // Handle success response (e.g., show a success message)
+                        alert('Remark added successfully');
+                        // You can also refresh the page or update the remarks section dynamically
+                    },
+                    error: function (error) {
+                        // Handle error response (e.g., show an error message)
+                        alert('Error adding remark');
+                    }
+                });
+            });
+        });
+    </script>
 
 </html>

@@ -140,11 +140,16 @@
         <p>No user ID found in session.</p>
     {% endif %}
  <ul>
-    {% for document in documents %}
-      <li><a href="{% url 'esign:management' document.pk %}">{{ document.title }}</a></li>
-    {% empty %}
-      <li>No PDFs available.</li>
-    {% endfor %}
+    {% for document, urls in documents_urls %}
+    <li>
+        <a href="{% url 'esign:management' urls %}">{{ document.title }}</a>
+        <!-- Here, you can access the associated URL using the 'url' variable -->
+        <!-- For example: -->
+        <!-- <a href="{{ url.url }}">Link Text</a> -->
+    </li>
+  {% empty %}
+    <li>No PDFs available.</li>
+  {% endfor %}
  </ul>
 {% endblock %}
 {% endif %}

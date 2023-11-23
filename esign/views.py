@@ -7,46 +7,142 @@ from django.contrib.auth import login, logout, authenticate
 from django.http import JsonResponse
 from datetime import datetime
 from django.db.models import F
+from django.core.mail import send_mail
+from django.contrib import messages
+import re
+import pyotp
+from django.contrib.auth.decorators import login_required
 
+@login_required(login_url='esign:xlogin')
 def index(request):
-    if not request.user.is_authenticated:
-        return render(request, 'esign/xlogin.html')
     user_id = request.session['user_id']
-    documents = Document.objects.all()
-    return render(request, 'esign/index.html', {'documents': documents, 'user_id': user_id})
+    # Get all documents for the user
+    documents = Document.objects.filter(docID__in=DocPermission.objects.filter(userID_id=user_id).values_list('docID_id', flat=True))
+
+    # get all the url for the documents
+    urls = URL.objects.filter(userID_id=user_id).values_list('url', flat=True)
+    
+
+    # zip the documents and urls together
+    documents_urls = zip(documents, urls)
+    return render(request, 'esign/index.html', {'documents_urls': documents_urls, 'user_id': user_id})
+
+# Error page for non-logged in users
+def xlogin(request):
+    return render(request, 'esign/xlogin.html')
 
 def login_request(request):
     context = {}
     # Handles POST request
     if request.method == "POST":
-        # Get username and password from request.POST dictionary
-        username = request.POST['username']
+        
+        userID = request.POST['UID']
         password = request.POST['psw']
-        # Try to check if provide credential can be authenticated
-        user = authenticate(username=username, password=password)
+
+        # Custom validation for member ID format
+        if not re.match(r'^USE\d{3}$', userID):
+            # Return an error message if the format is incorrect
+            context['error'] = "Wrong member ID. Please try again."
+            return render(request, 'esign/user_login.html', context)
+
+        user = authenticate(request, userID=userID, password=password)
         if user is not None:
-            # If user is valid, call login method to login current user
-            login(request, user)
-            # Set session for logged-in user ID
-            request.session['user_id'] = user.userID
-            user_id = request.session['user_id']
-            return redirect('esign:index')
-        else:
-            # Check for the presence of the 'logout' query parameter
-            show_logout_modal = 'logout' in request.GET
-            if show_logout_modal:
-                # If not, return to login page again
-                return render(request, 'esign/user_login.html', {'show_logout_modal': show_logout_modal})
+            if user.MFA:  # Check if MFA is enabled for the user
+                # If MFA is enabled, proceed to generate OTP and verify
+                login(request, user)
+                # Generate a TOTP secret key for the user
+                totp = pyotp.TOTP(pyotp.random_base32(), interval=60)  # You can change the interval as needed
+                
+                # Store TOTP secret in session for the user
+                request.session['totp_secret'] = totp.secret
+                # Calculate TOTP code based on the secret
+                totp_code = totp.now()
+                # Send TOTP code via email
+                send_totp_email(user.email, totp_code)
+                request.session['email'] = user.email
+                
+                return render(request, 'esign/verify_totp.html', {'user_id': user.userID, 'totp_code': totp_code})
             else:
-                return render(request, 'esign/user_login.html', context)
+                # If MFA is not enabled, redirect to the index page
+                login(request, user)
+                request.session['user_id'] = user.userID
+                return redirect('esign:index')
+        else:
+            messages.error(request, 'Invalid credentials. Please try again.')  # Error message if login fails
+            return render(request, 'esign/user_login.html', context)
     else:
         # Check for the presence of the 'logout' query parameter
         show_logout_modal = 'logout' in request.GET
         if show_logout_modal:
             # If not, return to login page again
+            logout(request)
             return render(request, 'esign/user_login.html', {'show_logout_modal': show_logout_modal})
         else:
             return render(request, 'esign/user_login.html', context)
+
+def send_totp_email(email, totp_code):
+    subject = 'Your TOTP Code'
+    message = f'Your TOTP code is: {totp_code}'
+    from_email = 'd34482807@gmail.com'
+    recipient_list = [email]
+
+    send_mail(subject, message, from_email, recipient_list)
+
+def resend_totp(request):
+    if request.method == "POST":
+        email = request.POST.get('email')  # Assuming you'll send the TOTP to a provided email
+        user_id = request.POST.get('user_id')
+        
+        # Generate a new TOTP code
+        totp = pyotp.TOTP(pyotp.random_base32(), interval=60)
+        request.session['totp_secret'] = totp.secret
+        totp_code = totp.now()
+
+        # Store the new TOTP secret in session
+        
+        request.session['email'] = email
+
+        # Send the new TOTP code via email
+        send_totp_email(email, totp_code)
+
+        # Return a JSON response indicating success
+        return JsonResponse({'success': True, 'message': 'TOTP code resent successfully.'})
+    else:
+        # Return an error message if the request method is not POST
+        return JsonResponse({'success': False, 'message': 'Invalid request method.'})
+
+@login_required(login_url='esign:xlogin')    
+def verify_totp(request):
+    if request.method == "POST":
+        user_id = request.POST.get('user_id')
+        email = request.POST.get('email')
+        totp_code = request.POST.get('totp_code')
+        
+        # Retrieve the stored TOTP secret from the session
+        stored_secret = request.session.get('totp_secret')
+        if stored_secret:
+            # Verify the entered TOTP code
+            totp = pyotp.TOTP(stored_secret, interval=60)  # Use the same interval as generated before
+            if totp.verify(totp_code):
+                # TOTP code is valid, proceed with user authentication
+                # Set up your login logic here
+                request.session['user_id'] = user_id
+                return redirect('esign:index')  # Redirect to a success page
+            else:
+                # TOTP code is invalid
+                request.session['totp_secret'] = totp_code
+                request.session['email'] = email
+                messages.error(request, 'Invalid TOTP code. Please login again.')
+                logout(request)
+                return redirect('esign:login')
+        else:
+            # TOTP secret not found in session, handle error
+            messages.error(request, 'Error: TOTP secret not found. Please login again.')
+            logout(request)
+            return redirect('esign:login')  # Redirect to login page with error message
+    else:
+        # Handle non-POST requests if needed
+        pass
 
 def logout_request(request):
     # Get the user object based on session id in request
@@ -62,6 +158,7 @@ def check_session(request):
     session_expired = not request.user.is_authenticated
     return JsonResponse({'session_expired': session_expired})
 
+###############      ERROR PAGES      ################
 def handler403(request, exception, template_name='403.html'):
     return render(request, template_name, status=403)
 
@@ -70,7 +167,7 @@ def handler404(request, exception, template_name='404.html'):
 
 def handler500(request, template_name='500.html'):
     return render(request, template_name, status=500)
-
+###############      ERROR PAGES      ################
 
 
 def save_pdf_to_db(request):
@@ -99,10 +196,9 @@ def save_pdf_to_db(request):
 
     
 ###########     MANAGEMENT     ###########
-
+@login_required(login_url='esign:xlogin')
 def management(request, hashed_url):
-    if not request.user.is_authenticated:
-        return render(request, 'esign/xlogin.html')
+    
     user_id = request.session['user_id']
     url = URL.objects.get(url=hashed_url)
     # Check if the hashed_url exists in the database
@@ -152,10 +248,31 @@ def management(request, hashed_url):
         # Appending the user data to the user_data list
         user_data.append((user_id, comps, username, email, role_for_user))
 
+    remarks = Remark.objects.filter(docID_id=document)
 
+    remark_data = []
+
+    for remark in remarks:
+        # Fetch the user associated with the remark
+        user = CustomUser.objects.get(pk=remark.userID_id)
+        
+        # Extract required data from the user and remark objects
+        username = user.username
+        content = remark.content
+        created_date = remark.created_at.strftime('%Y-%m-%d %H:%M:%S')  # Format date as needed
+        
+        # Create a dictionary with the required data
+        remark_info = {
+            'username': username,
+            'content': content,
+            'created_date': created_date
+        }
+        
+        # Append the remark information to the remark_data list
+        remark_data.append(remark_info)
 
     companies = Organization.objects.all()  # Fetch all companies from the database
-    return render(request, 'esign/manage.html', {'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'companies': companies, 'user_id': user_id})
+    return render(request, 'esign/manage.html', {'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'companies': companies, 'user_id': user_id, 'remark_data': remark_data})
 
 
 
@@ -232,6 +349,24 @@ def update_permission(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False})
 
+def add_remark(request):
+    if request.method == 'POST':
+        # Extract the remark content from the submitted form data
+        remark_content = request.POST.get('remark')
+        document_id = request.POST.get('doc_id')  # Pass document ID from the frontend form
+        user_id = request.session.get('user_id')  # Get the logged-in user ID from the session
+
+        # Create and save the new Remark instance
+        new_remark = Remark(content=remark_content, docID_id=document_id, userID_id=user_id)
+        new_remark.save()
+
+        # You can return a success response or handle it as needed
+        return JsonResponse({'message': 'Remark added successfully'})
+
+    # Handle invalid requests or methods
+    return JsonResponse({'message': 'Invalid request'}, status=400)
+
+###########     MANAGEMENT     ###########
 
 
 
