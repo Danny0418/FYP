@@ -144,7 +144,7 @@
                                 <div class="row mt-4">
                                     <div class="form-group">
                                         <label for="compSelect"><b>Company</b></label>
-                                        <select class="form-control" id="compSelect" multiple aria-label="select example">
+                                        <select class="form-select" id="compSelect"  aria-label="select example" style="border:1px solid #aaa; color: grey;">
                                             {% for company in companies %}
                                                 <option value="{{ company.pk }}">{{ company.name }}</option>
                                             {% endfor %}
@@ -155,7 +155,7 @@
                                 <div class="row mt-4">
                                     <div class="form-group">
                                         <label for="nameSelect"><b>Name (E-mail)</b></label>
-                                        <select class="form-control" id="nameSelect" multiple aria-label="select example">
+                                        <select class="form-select" id="nameSelect"  aria-label="select example" style="border:1px solid #aaa; color: grey;">
                                 
                                     </select>
                                         <!-- <input type="text" id="name" class="form-control" placeholder="John Doe" name="name" required> -->
@@ -181,7 +181,7 @@
                                             <option value="Owner">Owner</option>
                                             <option value="BOD">Board of Directors</option>
                                             <option value="CS">Company Secretary</option>
-                                    </select>
+                                        </select>
                                         <!-- <input type="text" id="role" class="form-control" placeholder="Role" name="role" required> -->
                                     </div>
                                 </div>
@@ -196,7 +196,7 @@
                                     {% load static %}
                                     {% if remark_data %}
                                     {% for remark_info in remark_data %}
-                                        <div class="d-flex pt-4" style="height: fit-content;">
+                                        <div class="d-flex pt-3" style="height: fit-content;">
                                             <div style="width: fit-content;">
                                                 <img src="{% static "images/香格里拉 雪山 打光.jpg" %}" alt="" style="width: 60px; height: 60px; object-fit: cover;">
                                             </div>
@@ -330,44 +330,44 @@
     $(document).ready(function () {
         var dateCheck = '{{ docDue }}';
         var selectedDate;
-                if (dateCheck == "1900-01-01T00:00"){
-                    $('#expDate').val('');;
-                }
-
-    // Listen for changes in the datetime-local input field
-    $('#expDate').on('change', function () {
-        // Get the selected datetime value
-        selectedDate = $(this).val();
-        
-
-        // Check if the selected date is not empty
-        if (selectedDate) {
-            // Show the Bootstrap confirmation modal
-            $('#dateModal').modal('show');
+        if (dateCheck == "1900-01-01T00:00") {
+            $('#expDate').val('');;
         }
-    });
+
+        // Listen for changes in the datetime-local input field
+        $('#expDate').on('change', function () {
+            // Get the selected datetime value
+            selectedDate = $(this).val();
+
+
+            // Check if the selected date is not empty
+            if (selectedDate) {
+                // Show the Bootstrap confirmation modal
+                $('#dateModal').modal('show');
+            }
+        });
 
     function formatDateTime(datetimeString) {
-    const date = new Date(datetimeString);
-    
-    // Extract date components
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    
-    // Get hours and minutes
-    let hours = date.getHours();
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    
-    // Convert hours to 12-hour format and determine AM or PM
-    const meridiem = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12; // Convert hours from 24-hour to 12-hour format
-    
-    // Format the datetime string
-    const formattedDateTime = `${day}/${month}/${year} ${hours}:${minutes} ${meridiem}`;
-    
-    return formattedDateTime;
-}
+            const date = new Date(datetimeString);
+
+            // Extract date components
+            const day = date.getDate().toString().padStart(2, '0');
+            const month = (date.getMonth() + 1).toString().padStart(2, '0');
+            const year = date.getFullYear();
+
+            // Get hours and minutes
+            let hours = date.getHours();
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+
+            // Convert hours to 12-hour format and determine AM or PM
+            const meridiem = hours >= 12 ? 'PM' : 'AM';
+            hours = hours % 12 || 12; // Convert hours from 24-hour to 12-hour format
+
+            // Format the datetime string
+            const formattedDateTime = `${day}/${month}/${year} ${hours}:${minutes} ${meridiem}`;
+
+            return formattedDateTime;
+        }
 
         // Handle confirmation or cancellation within the modal if needed
         $('#dateConfirmAction').on('click', function () {
@@ -458,7 +458,7 @@
                 
         $('#compSelect').select2({
             placeholder: 'Search for a company',
-            allowClear: true // Optional - adds a clear button
+            allowClear: false // Optional - adds a clear button
         });
 
         // Event listener for company selection change
@@ -487,10 +487,15 @@
 
                     // Populate name options
                     names.forEach(function (name) {
-                        $('#nameSelect').append($('<option>', {
+                        if (signerNames.includes(name.value)) {
+                            
+                        }else{
+                            $('#nameSelect').append($('<option>', {
                             value: name.value,
                             text: name.text
                         }));
+                        }
+                        
                     });
 
                     // Trigger change event to update Select2 dropdown UI
@@ -504,7 +509,7 @@
 
         $('#nameSelect').select2({
             placeholder: 'Search for a name',
-            allowClear: true // Optional - adds a clear button
+            allowClear: false // Optional - adds a clear button
         });
 
         var signerNames = []; // Array to store signer names
@@ -587,12 +592,13 @@
 
             if (check === 1) {
                 alert('Signer already exists in the list!');
+                $('#confirmationModal').modal('hide');
             } else {
                 $.ajax({
                 url: '/esign/update_permission/',
                 method: 'POST',
                 data: {
-                    selectedID: selectedID[0],
+                    selectedID: selectedID,
                     selectedRole: role,
                     document_id: '{{ docID }}',
                     csrfmiddlewaretoken: '{{ csrf_token }}', // Include CSRF token
@@ -609,41 +615,51 @@
 
                         // Show Bootstrap success modal
                         var successModal = $('<div class="modal fade" id="successModal" tabindex="-1" role="dialog" aria-labelledby="successModalLabel" aria-hidden="true" data-backdrop="static">' +
-                            '<div class="modal-dialog" role="document">' +
-                            '<div class="modal-content bg-success">' + // Set the background color to light green
-                            '<div class="modal-header">' +
-                            '<h5 class="modal-title text-white" id="successModalLabel">Success</h5>' +
-                            '</div>' +
-                            '<div class="modal-body text-white">' + // Set the text color to white
-                            successMessage +
-                            '</div>' +
-                            '</div>' +
-                            '</div>' +
-                            '</div>');
+    '<div class="modal-dialog" role="document">' +
+    '<div class="modal-content bg-success">' + // Set the background color to light green
+    '<div class="modal-header">' +
+    '<h5 class="modal-title text-white" id="successModalLabel">Success</h5>' +
+    '<button type="button" class="close" aria-label="Close" style="display:none;">' + // Hide the close button
+    '<span aria-hidden="true">&times;</span>' +
+    '</button>' +
+    '</div>' +
+    '<div class="modal-body text-white">' + // Set the text color to white
+    successMessage +
+    '</div>' +
+    '</div>' +
+    '</div>' +
+    '</div>');
+
+// Prevent modal from closing when clicking outside or pressing Esc
+successModal.modal({
+    backdrop: 'static',
+    keyboard: false
+});
 
                         $('body').append(successModal);
                         $('#successModal').modal('show');
 
                         // Close the success modal after 5 seconds
                         setTimeout(function () {
-                            $('#successModal').modal('hide');
-                            successModal.remove();
+                            location.reload();
                         }, 5000);
 
                         // Add the signer to the signer list select element
-                        $('#signerListSelect').append($('<option>', {
-                            value: selectedID,
-                            text: signerInfo
-                        }));
-                        updateSignerList(selectedID);
+                        // $('#signerListSelect').append($('<option>', {
+                        //     value: selectedID,
+                        //     text: signerInfo
+                        // }));
+                        // location.reload();
                     } else {
                         // Handle failure if needed
                         alert('Error updating signer list!');
+                        $('#confirmationModal').modal('hide');
                     }
                 },
                 error: function (xhr, errmsg, err) {
                     // Handle error if needed
                     alert('Error updating signer list!');
+                    $('#confirmationModal').modal('hide');
                 }
             });
 
@@ -785,7 +801,8 @@ const csrftoken = getCSRFToken();
                     success: function (response) {
                         // Handle success response (e.g., show a success message)
                         alert('Remark added successfully');
-                        // You can also refresh the page or update the remarks section dynamically
+                        // Reload the page to display the new remark
+                        location.reload();
                     },
                     error: function (error) {
                         // Handle error response (e.g., show an error message)

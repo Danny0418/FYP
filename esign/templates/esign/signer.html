@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <!-- Add this in the head section of your HTML file -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <!-- Add this in the head section of your HTML file -->
+    <!-- Use the latest version of idle-js from jsDelivr -->
+    <!-- <script src="https://cdn.jsdelivr.net/npm/idle-js@1.2.0/dist/Idle.min.js"></script> -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css" integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+    <!-- CSS -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet" />
+
+    <meta charset="UTF-8">
+    <title>{{document.title}}</title>
+    <script>
+      function checkSessionStatus() {
+          // Send an AJAX request to a Django view that checks the session status
+          var xhr = new XMLHttpRequest();
+          xhr.open('GET', '/esign/check_session/', true);
+          xhr.onreadystatechange = function () {
+              if (xhr.readyState === 4) {
+                  if (xhr.status === 200) {
+                      var response = JSON.parse(xhr.responseText);
+                      if (response.session_expired) {
+    
+                        // Create a new Bootstrap modal element
+                var modalHTML = `
+                  <div class="modal fade" id="sessionExpiredModal" tabindex="-1" role="dialog" aria-labelledby="sessionExpiredModalLabel" aria-hidden="true" data-backdrop="static">
+                    <div class="modal-dialog" role="document">
+                      <div class="modal-content">
+                        <div class="modal-header">
+                          <h5 class="modal-title" id="sessionExpiredModalLabel">Session Expired</h5>
+                        </div>
+                        <div class="modal-body">
+                          Your session has expired. Please log in again.
+                        </div>
+                        <div class="modal-footer">
+                          <!-- Add any buttons or additional content here if needed -->
+                          <a href="/esign/login" class="btn btn-primary">Log In</a>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                `;
+    
+                // Set the body content to the modal HTML
+                document.body.innerHTML = modalHTML;
+    
+                // Show the Bootstrap modal
+                $('#sessionExpiredModal').modal('show');
+                          // Display an alert to the user
+    //             alert("Your session has expired. Please log in again.");
+    
+    // // Redirect the user to the login page
+    // window.location.href = '/esign/login';
+                      }
+                  } else {
+                      console.error('Error checking session status:', xhr.statusText);
+                  }
+              }
+          };
+          xhr.send();
+      }
+    
+      checkSessionStatus();
+      // Check the session status every 60 seconds (adjust as needed)
+      setInterval(checkSessionStatus, 60000);
+    </script>
+
+
+    <style>
+        /* Add custom styles for the canvas */
+        #pdfCanvas {
+            border: 5px solid #333; /* Thick border */
+            width: 100%; /* Canvas width */
+            height: 100%; /* Canvas height */
+        }
+    </style>
+</head>
+    <body>
+        <div class="container-fluid ">
+            <div style="height: 5vh;"></div>
+            <div class="d-flex flex-column max-vh-70 justify-content-center mx-5">
+                <div class="row">
+                    <div class="col-4" id="pdfContainer" data-document-id="{{ docID }}">
+                        <canvas id="pdfCanvas"></canvas> <!-- Element to display PDF -->
+                    </div>
+                    <div class="col-8">
+                        <div class="row mb-3">
+                            <div class="d-flex bd-highlight">
+                                <div class="flex-grow-1 bd-highlight" style="width: 40vw;">
+                                    <h2>
+                                        <span id="editableTitle" style="cursor: pointer;">
+                                            <b>{{ document.title }}</b>
+                                        </span>
+                                    </h2>
+                                    <input type="text" id="editTitleInput" style="display: none;">
+                                </div>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="d-grid">
+                                <!-- Add a button to redirect to detail.html to sign the document -->
+                                <a href="{% url 'esign:detail' document.pk %}" class="btn btn-success">View / Sign</a>
+                            </div>
+                        </div>
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <h3><b>Signer List</b></h3>
+                                <div style="height: 32vh; border: 5px solid #333; font-size:20px; overflow-y: scroll;">
+                                    {% for user_id, comps, username, emails, role_for_user in user_data %}
+                                    <p style="padding-left:15px">
+                                        {{ comps }} ({{ username }}) ({{ emails }}) (
+                                            {% for role in role_for_user %}
+                                                {{ role.type }}
+                                            {% endfor %}
+                                        )
+                                    </p>
+                                {% endfor %}
+                                </div>
+                            </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+                            <!-- <div class="col-6">
+                                <div class="d-flex bd-highlight">
+                                    <div class=" flex-grow-1 bd-highlight"><h3><b>Remark</b></h3></div>
+                                </div>
+                                
+                                <div class="container pt-2" style="height: 32vh; border: 5px solid #333;">
+                                    <div class="container" style="height: 15vh; overflow-y: scroll;">
+                                        {% load static %}
+                                        {% if remark_data %}
+                                        {% for remark_info in remark_data %}
+                                            <div class="d-flex pt-3" style="height: fit-content;">
+                                                <div style="width: fit-content;">
+                                                    <img src="{% static "images/香格里拉 雪山 打光.jpg" %}" alt="" style="width: 60px; height: 60px; object-fit: cover;">
+                                                </div>
+                                                <div style="width: 95%; margin-left: 30px;">
+                                                    
+                                                        <h6><b>{{ remark_info.username  }}</b><span style="color:grey; margin-left: 50px;">{{ remark_info.created_date }}</span></h6>
+                                                        <p>{{ remark_info.content  }}</p>
+                                                    
+                                                </div>
+                                                
+                                            </div>
+                                            {% endfor %}
+                                            {% else %}
+                                            <p>No remarks available.</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-group pt-3">
+                                        <textarea class="form-control" id="remark" rows="2" placeholder="Leave a message..." name="remark" required style="resize: none;"></textarea>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="button" class="btn btn-primary mt-3" id="submitRemarkBtn">
+                                            <b>Submit</b>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div> -->
+                        </div>
+
+
+
+
+
+
+                        <div class="row">
+                            <div class="container">
+                                <h3><b>Remark</b></h3>
+                                <div class="container pt-2" style="height: 30vh; border: 5px solid #333;">
+                                    <div class="container" style="height: 12vh; overflow-y: scroll;">
+                                        {% load static %}
+                                        {% if remark_data %}
+                                        {% for remark_info in remark_data %}
+                                            <div class="d-flex pt-3" style="height: fit-content;">
+                                                <div style="width: fit-content;">
+                                                    <img src="{% static "images/香格里拉 雪山 打光.jpg" %}" alt="" style="width: 60px; height: 60px; object-fit: cover;">
+                                                </div>
+                                                <div style="width: 95%; margin-left: 30px;">
+                                                    
+                                                        <h6><b>{{ remark_info.username  }}</b><span style="color:grey; margin-left: 50px;">{{ remark_info.created_date }}</span></h6>
+                                                        <p>{{ remark_info.content  }}</p>
+                                                    
+                                                </div>
+                                                
+                                            </div>
+                                            {% endfor %}
+                                            {% else %}
+                                            <p>No remarks available.</p>
+                                        {% endif %}
+                                    </div>
+                                    <div class="form-group pt-3">
+                                        <textarea class="form-control" id="remark" rows="2" placeholder="Leave a message..." name="remark" required style="resize: none;"></textarea>
+                                    </div>
+                                    <div class="d-grid">
+                                        <button type="button" class="btn btn-primary mt-3" id="submitRemarkBtn">
+                                            <b>Submit</b>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="height: 5vh;" class="mt-3">
+                <div class="row">
+                    <div class="col-4">
+                    </div>
+                    <div class="col-8">
+                        <div class="d-flex justify-content-center">
+                            <p><b>Expiry Date:&nbsp;</b></p>
+                            <p>{{ docDue }}<br /></p>
+                            
+                        </div>
+                        <div class="d-flex justify-content-center" style="margin-top: -15px;;">
+                            
+                            <p><b>Prepared by:&nbsp;</b></p>
+                            <p>
+                                {% for user_id, comps, username, emails, role_for_user in owners_data %}
+                                    {% if forloop.last %}
+                                        {% for role in role_for_user %}
+                                            
+                                                {%if role.type == "Owner" %}
+                                                    {{ username }}
+                                                {% endif %}
+                                            
+                                            
+                                        {% endfor %}
+                                    {% else %}
+                                    {% for role in role_for_user %}
+                                            
+                                    {%if role.type == "Owner" %}
+                                        {{ username }},
+                                    {% endif %}
+                                
+                                
+                            {% endfor %}
+                                    {% endif %}
+                                {% endfor %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </body>
+
+
+    <!-- Include Bootstrap JS and jQuery -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.8/dist/umd/popper.min.js" integrity="sha384-I7E8VVD/ismYTF4hNIPjVp/Zjvgyol6VFvRkX/vR+Vc4jQkC+hVqc2pM8ODewa9r" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.min.js" integrity="sha384-BBtl+eGJRgqQAUMxJ7pMwbEyER4l1g+O15P+16Ep7Q9Q+zqX6gSbd85u4mG4QzX+" crossorigin="anonymous"></script>
+
+
+    <!-- JavaScript -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+
+    <script>
+        // Load and render the first page of the PDF document
+        const pdfUrl = '{{ document.pdf_file.url }}'; // Replace with the actual URL or path of your PDF document
+        const canvas = document.getElementById('pdfCanvas');
+        const context = canvas.getContext('2d');
+        const parentDiv = canvas.parentElement;
+
+        pdfjsLib.getDocument(pdfUrl).promise.then(function (pdf) {
+            pdf.getPage(1).then(function (page) {
+                const viewport = page.getViewport({ scale: 1 });
+                canvas.height = viewport.height;
+                canvas.width = parentDiv.clientWidth;
+                const scale = canvas.width / viewport.width;
+
+                const renderContext = {
+                    canvasContext: context,
+                    viewport: page.getViewport({ scale: scale }),
+                };
+                page.render(renderContext);
+            });
+        }).catch(function (error) {
+            console.error('Error loading PDF:', error);
+        });
+    </script>
+
+
+    
+    <script>
+        // Function to get the CSRF token from the cookie
+        function getCSRFToken() {
+            const cookieValue = document.cookie
+                .split('; ')
+                .find(row => row.startsWith('csrftoken='))
+                .split('=')[1];
+            return cookieValue;
+        }
+
+        // Use the CSRF token in AJAX requests
+        const csrftoken = getCSRFToken();
+
+        $(document).ready(function () {
+            $('#submitRemarkBtn').click(function () {
+                // Get the remark content and document ID
+                var remarkContent = $('#remark').val();
+
+                // Prepare the data to be sent to the server
+                var formData = {
+                    remark: remarkContent,
+                    doc_id: '{{docID}}'
+                };
+
+                // Send an AJAX request to add the remark
+                $.ajax({
+                    type: 'POST',
+                    url: '/esign/add_remark/', // Replace with your backend endpoint URL
+                    headers: {
+                        'X-CSRFToken': csrftoken  // Add the CSRF token to the request headers
+                    },
+                    data: formData,
+                    success: function (response) {
+                        // Handle success response (e.g., show a success message)
+                        alert('Remark added successfully');
+                        // Reload the page to display the new remark
+                        location.reload();
+                    },
+                    error: function (error) {
+                        // Handle error response (e.g., show an error message)
+                        alert('Error adding remark');
+                    }
+                });
+            });
+        });
+    </script>
+
+</html>

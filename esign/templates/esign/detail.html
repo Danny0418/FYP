@@ -3,7 +3,6 @@
 <head>
     {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/course.css' %}">
-    {% load static %}
     <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
     <!-- Add this in the head section of your HTML file -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
@@ -74,7 +73,7 @@
 {% if user.is_authenticated %}
     <div class="rightalign">
         <div class="dropdown">
-            <button class="dropbtn">{{user.first_name}}</button>
+            <button class="dropbtn">{{user.username}}</button>
             <div class="dropdown-content">
               <a href="{% url 'esign:logout' %}">Logout</a>
             </div>
@@ -94,7 +93,7 @@
     </div>
 {% endif %}
 
-{% block content %}
+
  <h1>{{ document.title }}</h1>
  <p>{{ document.content|linebreaksbr }}</p>
  <h2>Signatures</h2>
@@ -106,7 +105,7 @@
     {% endfor %}
  </ul>
  <!-- Display the PDF content using an iframe -->
- <iframe src="{{ document.pdf_file.url }}" width="100%" height="70%" ></iframe>
+ <iframe src="{{ document.pdf_file.url }}" width="100%" height="1000" ></iframe>
 <!-- 
  <head>
   <title>Custom PDF Viewer</title>
@@ -168,7 +167,7 @@
   </div>
 </div>
  
-{% endblock %}
+
 </body>
 
 <!-- Add this script at the end of your HTML file, before the closing body tag -->

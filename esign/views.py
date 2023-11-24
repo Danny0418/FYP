@@ -17,11 +17,17 @@ from django.contrib.auth.decorators import login_required
 def index(request):
     user_id = request.session['user_id']
     # Get all documents for the user
-    documents = Document.objects.filter(docID__in=DocPermission.objects.filter(userID_id=user_id).values_list('docID_id', flat=True))
+    documents = []
+    # documents = Document.objects.filter(docID__in=DocPermission.objects.filter(userID_id=user_id).values_list('docID_id', flat=True))
 
     # get all the url for the documents
     urls = URL.objects.filter(userID_id=user_id).values_list('url', flat=True)
-    
+
+    for user_id in urls:
+        # get documents for the user
+        documents.append(Document.objects.get(docID=URL.objects.get(url=user_id).docID_id))
+
+    user_id = request.session['user_id']
 
     # zip the documents and urls together
     documents_urls = zip(documents, urls)
@@ -216,7 +222,8 @@ def management(request, hashed_url):
     docID = document.docID
     docCreate = document.created_date.strftime('%Y-%m-%dT%H:%M')
     docDue = document.due_date.strftime('%Y-%m-%dT%H:%M')
-    # permission = DocPermission.objects.filter(docID_id=url.docID_id)
+
+    chkPermission = DocPermission.objects.get(docID_id=url.docID_id, userID_id=user_id)
 
     # Get all unique UserIDs from DocPermission
     permission = DocPermission.objects.filter(docID_id=url.docID_id)
@@ -235,18 +242,7 @@ def management(request, hashed_url):
     role = DocPermission.objects.filter(docID_id=url.docID_id, userID_id__in=unique_user_ids)
 
     user_data = []
-
-    for user_id in unique_user_ids:
-        comps = user_company_names.get(user_id, 'No Company')  # Get the company name or set a default value
-
-        # Fetching other user details as before
-        user_details = CustomUser.objects.get(userID=user_id)
-        username = user_details.username
-        email = user_details.email
-        role_for_user = role.filter(userID_id=user_id)
-
-        # Appending the user data to the user_data list
-        user_data.append((user_id, comps, username, email, role_for_user))
+    owners_data = []
 
     remarks = Remark.objects.filter(docID_id=document)
 
@@ -270,6 +266,39 @@ def management(request, hashed_url):
         
         # Append the remark information to the remark_data list
         remark_data.append(remark_info)
+
+    if chkPermission.type != 'Owner':
+        for user_id in unique_user_ids:
+            comps = user_company_names.get(user_id, 'No Company')  # Get the company name or set a default value
+
+            # Fetching other user details as before
+            user_details = CustomUser.objects.get(userID=user_id)
+            username = user_details.username
+            email = user_details.email
+            role_for_user = role.filter(userID_id=user_id)
+
+            # Check if the user has 'Owner' role
+            if role_for_user.filter(type='Owner').exists():
+                # If the user is an owner, store their data in the owners_data list
+                owners_data.append((user_id, comps, username, email, role_for_user))
+
+            else:
+                # If the user is not an owner, store their data in the user_data list
+                user_data.append((user_id, comps, username, email, role_for_user))
+
+        docDue = document.due_date.strftime('%Y-%m-%d %H:%M')
+        return render(request, 'esign/signer.html', {'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'owners_data':owners_data, 'user_id': user_id, 'remark_data': remark_data})
+
+    for user_id in unique_user_ids:
+        comps = user_company_names.get(user_id, 'No Company')  # Get the company name or set a default value
+
+        # Fetching other user details as before
+        user_details = CustomUser.objects.get(userID=user_id)
+        username = user_details.username
+        email = user_details.email
+        role_for_user = role.filter(userID_id=user_id)
+
+        user_data.append((user_id, comps, username, email, role_for_user))
 
     companies = Organization.objects.all()  # Fetch all companies from the database
     return render(request, 'esign/manage.html', {'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'companies': companies, 'user_id': user_id, 'remark_data': remark_data})
