@@ -151,3 +151,4 @@ AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
 ]
 
+# TIME_ZONE = 'Asia/Singapore'

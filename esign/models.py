@@ -5,6 +5,7 @@ from django.utils import timezone
 from django.contrib import admin
 import hashlib
 import datetime
+from .managers import CustomUserManager
 
 def validate_pdf_extension(value):
     if not value.name.endswith('.pdf'):
@@ -49,6 +50,8 @@ class CustomUser(AbstractUser):
     groups = models.ManyToManyField(Group, related_name='custom_user_set', blank=True)
     user_permissions = models.ManyToManyField(Permission, related_name='custom_user_set', blank=True)
 
+    REQUIRED_FIELDS = ('email', 'orgID', 'position')
+
     def save(self, *args, **kwargs):
         if not self.userID:
             # Get the latest organization
@@ -63,6 +66,7 @@ class CustomUser(AbstractUser):
                 self.userID = 'USE001'
 
         super(CustomUser, self).save(*args, **kwargs)
+    objects = CustomUserManager()
 
     def __str__(self):
         return self.username

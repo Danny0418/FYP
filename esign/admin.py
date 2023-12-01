@@ -1,7 +1,33 @@
 from django.contrib import admin
+from django.contrib.auth.admin import UserAdmin
+from .forms import CustomUserCreationForm, CustomUserChangeForm
 from .models import *
 
 # Register your models here.
+class CustomUserAdmin(UserAdmin):
+    add_form = CustomUserCreationForm
+    form = CustomUserChangeForm
+    model = CustomUser
+    list_display = ("email", "is_staff", "is_active",)
+    list_filter = ("email", "is_staff", "is_active",)
+    fieldsets = (
+        (None, {"fields": ("email", "password", "username",  "position")}),
+        ("Permissions", {"fields": ("is_staff", "is_active", "groups", "user_permissions")}),
+    )
+    add_fieldsets = (
+        (None, {
+            "classes": ("wide",),
+            "fields": (
+                "email", "password1", "password2", "username",  "position", "is_staff",
+                "is_active", "groups", "user_permissions"
+            )}
+        ),
+    )
+    search_fields = ("email",)
+    ordering = ("email",)
+
+
+admin.site.register(CustomUser, CustomUserAdmin)
 
 class DocumentAdmin(admin.ModelAdmin):
     # fieldsets = [
@@ -26,4 +52,3 @@ class OrganizationAdmin(admin.ModelAdmin):
 admin.site.register(Document, DocumentAdmin)
 admin.site.register(Signature, SignatureAdmin)
 admin.site.register(Organization, OrganizationAdmin)
-admin.site.register(CustomUser)

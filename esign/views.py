@@ -12,6 +12,291 @@ from django.contrib import messages
 import re
 import pyotp
 from django.contrib.auth.decorators import login_required
+import PyPDF2
+from django.shortcuts import render
+from django.core.files.storage import FileSystemStorage
+import os
+from django.conf import settings
+from django.http import HttpResponse
+from PyPDF2 import PdfReader
+from pyhanko.sign import fields
+from pyhanko.sign.signers import SimpleSigner
+from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+# from pyhanko.stamp import ImageStampStyle
+
+# def add_image_signature(request):
+#     if request.method == 'POST' and request.FILES['pdf_file'] and request.FILES['image_file']:
+#         pdf_file = request.FILES['pdf_file']
+#         image_file = request.FILES['image_file']
+
+#         # Saving the uploaded files
+#         fs = FileSystemStorage()
+#         pdf_filename = fs.save(pdf_file.name, pdf_file)
+#         image_filename = fs.save(image_file.name, image_file)
+
+#         # Open the PDF file
+#         pdf_input = open(fs.path(pdf_filename), 'rb')
+#         pdf_reader = PyPDF2.PdfReader(pdf_input)
+#         pdf_writer = PyPDF2.PdfWriter()
+
+#         # Choose a page to add the image signature
+#         page_num = 0  # Change this to your desired page number
+
+#         # Open the image file
+#         img = open(fs.path(image_filename), 'rb')
+
+#         # Get the PDF page and merge the image
+#         page = pdf_reader.getPage(page_num)
+#         page.merge_page(PyPDF2.PdfReader(img).getPage(0))
+#         pdf_writer.addPage(page)
+
+#         # Save the modified PDF
+#         output_filename = 'output.pdf'
+#         with open(output_filename, 'wb') as output:
+#             pdf_writer.write(output)
+
+#         pdf_input.close()
+#         img.close()
+
+#         return render(request, 'success.html', {'output_filename': output_filename})
+
+#     return render(request, 'add_image_signature.html')
+
+# def add_image_signature(request):
+#     try:
+#         # Paths to PDF and image file
+#         pdf_path = os.path.join(settings.MEDIA_ROOT, 'pdfs', 'System-Development-Method-With-The-Prototype-Method.pdf')
+#         image_path = os.path.join(settings.MEDIA_ROOT, 'signatures', 'astra_avatar.png')
+
+#         output_filename = 'output.pdf'
+
+#         # Open the PDF file
+#         pdf_input = open(pdf_path, 'rb')
+#         pdf_reader = PyPDF2.PdfReader(pdf_input)
+#         pdf_writer = PyPDF2.PdfWriter()
+
+#         # Choose a page to add the image signature
+#         page_num = 0  # Change this to your desired page number
+
+#         # Open the image file
+#         img = open(image_path, 'rb')
+
+#         # Get the PDF page and merge the image
+#         page = pdf_reader.pages[page_num]
+#         img_page = PyPDF2.PdfReader(img).getPage(0)
+        
+#         # Ensure the image page has the required dimensions
+#         img_page.mediaBox.upperRight = (
+#             page.mediaBox.getUpperRight_x(),
+#             page.mediaBox.getUpperRight_y()
+#         )
+
+#         page.merge_page(img_page)
+#         pdf_writer.addPage(page)
+
+#         # Save the modified PDF
+#         output_path = os.path.join(settings.MEDIA_ROOT, output_filename)
+#         with open(output_path, 'wb') as output:
+#             pdf_writer.write(output)
+
+#         pdf_input.close()
+#         img.close()
+
+#         output_url = os.path.join(settings.MEDIA_URL, output_filename)
+
+#         return render(request, 'success.html', {'output_url': output_url})
+
+#     except Exception as e:
+#         # Handle exceptions, log errors, or display an error message
+#         return render(request, 'esign/error.html', {'error_message': str(e)})
+
+# def add_image_signature(request):
+#     try:
+#         # Paths to the main PDF and the watermark PDF
+#         main_pdf_path = os.path.join(settings.MEDIA_ROOT, 'pdfs', 'Tunku_Abdul_Rahman_University_of_Management_and_Technology_TAR_UMT_-_Student_Intran_Xs7fVdR.pdf')
+#         watermark_pdf_path = os.path.join(settings.MEDIA_ROOT, 'pdfs', 'watermark.pdf')
+
+#         output_filename = 'output_with_watermark.pdf'
+
+#         # Open the main PDF file
+#         main_pdf_input = open(main_pdf_path, 'rb')
+#         main_pdf_reader = PyPDF2.PdfReader(main_pdf_input)
+#         main_pdf_writer = PyPDF2.PdfWriter()
+
+#         # Open the watermark PDF file
+#         watermark_pdf = open(watermark_pdf_path, 'rb')
+#         watermark_pdf_reader = PyPDF2.PdfReader(watermark_pdf)
+#         watermark_page = watermark_pdf_reader.pages[0]
+
+#         # Merge each page of the main PDF on top of the watermark
+#         for page_num in range(len(main_pdf_reader.pages)):
+#             main_page = main_pdf_reader.pages[page_num]
+#             main_page.merge_page(watermark_page)
+#             main_pdf_writer.add_page(main_page)
+
+#         # Save the modified PDF with the main content over the watermark
+#         output_path = os.path.join(settings.MEDIA_ROOT, 'pdfs', output_filename)
+#         with open(output_path, 'wb') as output:
+#             main_pdf_writer.write(output)
+
+#         main_pdf_input.close()
+#         watermark_pdf.close()
+
+#         output_url = os.path.join(settings.MEDIA_URL, 'pdfs', output_filename)
+
+#         return render(request, 'esign/success.html', {'output_url': output_url})
+
+#     except Exception as e:
+#         return render(request, 'error.html', {'error_message': str(e)})
+
+# def add_signature_to_pdf(request):
+#     # Paths to your PDF and signature image
+#     pdf_path = 'media/pdfs/default.pdf'
+#     signature_image_path = 'media/signature/astra_avatar.png'
+
+#     signer = SimpleSigner.load(request.user.certificate_path, request.user.private_key_path, chain_path=request.user.chain_path)
+
+#     writer = IncrementalPdfFileWriter(open(pdf_path, 'rb'))
+#     sig_field_name = 'signature_field_name'  # Replace with the field name in your PDF where you want to add the signature
+
+#     # Load the PDF field where the signature will be placed
+#     field = fields.SignatureFormField(sig_field_name)
+#     field.embedder = writer
+#     field.prepare_general(writer.reader)
+
+#     # Prepare the image for the signature
+#     signature_image = ImageStampStyle.from_file(signature_image_path)
+
+#     # Sign the PDF
+#     sig_field_appearance = signer.sign(
+#         writer, field, signature_image=signature_image, existing_fields_only=True
+#     )
+
+#     # Save the modified PDF
+#     with open('path/to/save/modified_document.pdf', 'wb') as modified_pdf:
+#         writer.write_in_place(modified_pdf)
+    
+#     return HttpResponse('Signature added successfully')
+
+from PyPDF2 import PdfReader
+from pyhanko.sign import fields, signers
+from pyhanko.sign.signers import SimpleSigner
+from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+# from pyhanko.stamp import ImageStampStyle
+
+# def add_image_signature(request):
+#     # Paths to your PDF and signature image
+#     pdf_path = 'media/pdfs/default.pdf'
+#     signature_image_path = 'media/signature/astra_avatar.png'
+
+#     signer = SimpleSigner.load(request.user.certificate_path, request.user.private_key_path, chain_path=request.user.chain_path)
+
+#     writer = IncrementalPdfFileWriter(open(pdf_path, 'rb'))
+#     sig_field_name = 'signature_field_name'  # Replace with the field name in your PDF where you want to add the signature
+
+#     # Load the PDF field where the signature will be placed
+#     field = fields.SignatureFormField(sig_field_name)
+#     field.embedder = writer
+#     field.prepare_general(writer.reader)
+
+#     # Prepare the image for the signature
+#     signature_image = ImageStampStyle.from_file(signature_image_path)
+
+#     # Sign the PDF
+#     sig_field_appearance = signer.sign(
+#         writer, field, signature_image=signature_image, existing_fields_only=True
+#     )
+
+#     # Save the modified PDF
+#     with open('media/pdfs//modified_document.pdf', 'wb') as modified_pdf:
+#         writer.write_in_place(modified_pdf)
+    
+#     return HttpResponse('Signature added successfully')
+
+from pyhanko import stamp
+from pyhanko.pdf_utils import text, images
+from pyhanko.pdf_utils.font import opentype
+from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
+from pyhanko.sign import fields, signers
+from pyhanko.pdf_utils.layout import SimpleBoxLayoutRule, Margins, AxisAlignment
+from pyhanko.pdf_utils.content import RawContent
+from pyhanko.pdf_utils.reader import PdfFileReader
+from pyhanko.sign.fields import SigFieldSpec
+
+
+def add_image_signature(request):
+    # Assuming 'pdf_file' is the uploaded PDF file from a Django form
+    pdf_file = os.path.join(settings.MEDIA_ROOT, 'pdfs', 'Tunku_Abdul_Rahman_University_of_Management_and_Technology_TAR_UMT_-_Student_Intran_Xs7fVdR.pdf')
+    image_path = os.path.join(settings.MEDIA_ROOT, 'signatures', 'astra_avatar.png')
+
+    # Setup the signature configuration
+    # (Refer to PyHanko documentation for the exact configuration)
+    signer = signers.SimpleSigner.load('media/cert/private_key.pem', "media/cert/certificate.pem", key_passphrase=b"12345")
+    
+
+    # Determine the dimensions of the PDF (assuming A4 size for this example)
+    pdf_width, pdf_height = 595, 842  # A4 dimensions in points
+    signature_box_width, signature_box_height = 200, 100  # Adjust as needed
+
+    # Calculate the bottom right coordinates
+    llx = pdf_width - signature_box_width  # Lower-left x-coordinate
+    lly = 0  # Lower-left y-coordinate
+    urx = pdf_width  # Upper-right x-coordinate
+    ury = signature_box_height  # Upper-right y-coordinate
+
+    # Adjust the layout rule for the stamp
+    layout_rule = SimpleBoxLayoutRule(
+        x_align=AxisAlignment.ALIGN_MID,  # or LEFT/RIGHT as per your need
+        y_align=AxisAlignment.ALIGN_MIN,  # Aligns content to the top
+        margins=Margins(0, 0, 0, 40)  # Adjust margins as needed
+    )
+
+    inner_layout_rule = SimpleBoxLayoutRule(
+        x_align=AxisAlignment.ALIGN_MID,  # or LEFT/RIGHT as per your need
+        y_align=AxisAlignment.ALIGN_MIN,  # Aligns content to the top
+        margins=Margins(0, 0, 0, 0)  # Adjust margins as needed
+    )
+
+    # Read the PDF file
+    with open(pdf_file, 'rb') as pdf_input:
+        reader = PdfFileReader(pdf_input)
+        pdf_reader = PyPDF2.PdfReader(pdf_input)
+        w = IncrementalPdfFileWriter(pdf_input)
+        # Loop through each page and add a signature field
+        for page_num in range(len(pdf_reader.pages)):
+            # Calculate signature field position for each page
+            # Adjust these values as needed
+            llx = pdf_width - signature_box_width
+            lly = 0
+            urx = pdf_width
+            ury = signature_box_height
+            signature_meta = signers.PdfSignatureMetadata(field_name=f'Signature_{page_num}')
+            fields.append_signature_field(
+                w, sig_field_spec=SigFieldSpec(
+                    f'Signature_{page_num}', box=(llx, lly, urx, ury), on_page=page_num
+                )
+            )
+            pdf_signer = signers.PdfSigner(
+                signature_meta, signer=signer, stamp_style=stamp.TextStampStyle(
+                    # the 'signer' and 'ts' parameters will be interpolated by pyHanko, if present
+                    stamp_text='This is custom text!\nSigned by: %(signer)s\nTime: %(ts)s',
+                    text_box_style=text.TextBoxStyle(
+                        font=opentype.GlyphAccumulatorFactory('media/font/NotoSans-Regular.ttf')
+                    ),
+                    background=images.PdfImage(image_path),
+                    background_layout=layout_rule,
+                    inner_content_layout=inner_layout_rule,
+                    border_width=0
+                ),
+            )
+            with open('media/signed/document-signed.pdf', 'wb') as outf:
+                pdf_signer.sign_pdf(w, output=outf)
+
+    return HttpResponse("PDF signed successfully")
+
+
+
+
 
 @login_required(login_url='esign:xlogin')
 def index(request):
@@ -287,7 +572,7 @@ def management(request, hashed_url):
                 user_data.append((user_id, comps, username, email, role_for_user))
 
         docDue = document.due_date.strftime('%Y-%m-%d %H:%M')
-        return render(request, 'esign/signer.html', {'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'owners_data':owners_data, 'user_id': user_id, 'remark_data': remark_data})
+        return render(request, 'esign/signer.html', {'hashed_url': hashed_url, 'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'owners_data':owners_data, 'user_id': user_id, 'remark_data': remark_data})
 
     for user_id in unique_user_ids:
         comps = user_company_names.get(user_id, 'No Company')  # Get the company name or set a default value
@@ -301,7 +586,7 @@ def management(request, hashed_url):
         user_data.append((user_id, comps, username, email, role_for_user))
 
     companies = Organization.objects.all()  # Fetch all companies from the database
-    return render(request, 'esign/manage.html', {'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'companies': companies, 'user_id': user_id, 'remark_data': remark_data})
+    return render(request, 'esign/manage.html', {'hashed_url': hashed_url, 'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'companies': companies, 'user_id': user_id, 'remark_data': remark_data})
 
 
 
@@ -398,24 +683,50 @@ def add_remark(request):
 ###########     MANAGEMENT     ###########
 
 
+###########     Sign / View     ###########
+@login_required(login_url='esign:xlogin')
+def sign(request, hashed_url):
+        
+    user_id = request.session['user_id']
+    url = URL.objects.get(url=hashed_url)
+    # Check if the hashed_url exists in the database
+    if not url:
+        return render(request, '404.html', status=404)
+    
+    # Check if the user is authorized to view the document
+    if url.userID_id != user_id:
+        return render(request, '403.html', status=403)
+    
+    # Get the document object from the database
+    document = Document.objects.get(pk=url.docID_id)
+    docID = document.docID
 
-def detail(request, pk):
-    if not request.user.is_authenticated:
-        return render(request, 'esign/xlogin.html')
-    document = Document.objects.get(pk=pk)
-    signatures = Signature.objects.filter(docID=document)
-    return render(request, 'esign/detail.html', {'document': document, 'signatures': signatures})
+    chkPermission = DocPermission.objects.get(docID_id=url.docID_id, userID_id=user_id)
 
-def sign(request, pk):
-    document = Document.objects.get(pk=pk)
-    if request.method == 'POST':
-        form = SignatureForm(request.POST, request.FILES)
-        if form.is_valid():
-            signature = form.save(commit=False)
-            signature.document = document
-            signature.signed_at = timezone.now()
-            signature.save()
-            return redirect('detail', pk=document.pk)
-    else:
-        form = SignatureForm()
-    return render(request, 'esign/sign.html', {'form': form})
+    remarks = Remark.objects.filter(docID_id=document)
+
+    remark_data = []
+
+    for remark in remarks:
+        # Fetch the user associated with the remark
+        user = CustomUser.objects.get(pk=remark.userID_id)
+        
+        # Extract required data from the user and remark objects
+        username = user.username
+        content = remark.content
+        created_date = remark.created_at.strftime('%Y-%m-%d %H:%M:%S')  # Format date as needed
+        
+        # Create a dictionary with the required data
+        remark_info = {
+            'username': username,
+            'content': content,
+            'created_date': created_date
+        }
+        
+        # Append the remark information to the remark_data list
+        remark_data.append(remark_info)
+
+    if chkPermission.type != 'Owner':
+        return render(request, 'esign/sign.html', {'hashed_url': hashed_url, 'docID': docID, 'document': document, 'user_id': user_id, 'remark_data': remark_data})
+
+    return render(request, 'esign/view.html', {'hashed_url': hashed_url, 'docID': docID, 'document': document, 'user_id': user_id, 'remark_data': remark_data})

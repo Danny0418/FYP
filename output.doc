@@ -1,0 +1,171 @@
+Folder PATH listing
+Volume serial number is F844-7293
+C:.
+|   db.sqlite3
+|   manage.py
+|   output.doc
+|   README.md
+|   
++---esign
+|   |   admin.py
+|   |   apps.py
+|   |   custom_backend.py
+|   |   forms.py
+|   |   models.py
+|   |   tests.py
+|   |   urls.py
+|   |   views.py
+|   |   __init__.py
+|   |   
+|   +---management
+|   |   \---commands
+|   |       |   create_custom_superuser.py
+|   |       |   
+|   |       \---__pycache__
+|   |               create_custom_superuser.cpython-312.pyc
+|   |               
+|   +---migrations
+|   |   |   0001_initial.py
+|   |   |   0002_document_pdf_file.py
+|   |   |   0003_remove_document_content.py
+|   |   |   0004_organization.py
+|   |   |   0005_alter_organization_orgid.py
+|   |   |   0006_customuser.py
+|   |   |   0007_alter_customuser_groups_and_more.py
+|   |   |   0008_docpermission.py
+|   |   |   0009_document_docid.py
+|   |   |   0010_remove_docpermission_docid.py
+|   |   |   0011_remove_document_id_alter_document_docid.py
+|   |   |   0012_rename_document_signature_docid.py
+|   |   |   0013_delete_signature.py
+|   |   |   0014_signature.py
+|   |   |   0015_url.py
+|   |   |   0016_docpermission_docid.py
+|   |   |   0017_alter_docpermission_docid.py
+|   |   |   0018_document_created_date.py
+|   |   |   0019_alter_document_created_date.py
+|   |   |   0020_document_due_date.py
+|   |   |   0021_alter_document_due_date.py
+|   |   |   0022_remove_document_due_date.py
+|   |   |   0023_test_document_due_date.py
+|   |   |   0024_alter_document_due_date.py
+|   |   |   0025_customuser_mfa.py
+|   |   |   0026_remark.py
+|   |   |   0027_rename_document_remark_docid_and_more.py
+|   |   |   __init__.py
+|   |   |   
+|   |   \---__pycache__
+|   |           0001_initial.cpython-312.pyc
+|   |           0002_document_pdf_file.cpython-312.pyc
+|   |           0003_remove_document_content.cpython-312.pyc
+|   |           0004_organization.cpython-312.pyc
+|   |           0005_alter_organization_orgid.cpython-312.pyc
+|   |           0006_customuser.cpython-312.pyc
+|   |           0007_alter_customuser_groups_and_more.cpython-312.pyc
+|   |           0008_docpermission.cpython-312.pyc
+|   |           0009_document_docid.cpython-312.pyc
+|   |           0010_remove_docpermission_docid.cpython-312.pyc
+|   |           0011_remove_document_id_alter_document_docid.cpython-312.pyc
+|   |           0012_rename_document_signature_docid.cpython-312.pyc
+|   |           0013_delete_signature.cpython-312.pyc
+|   |           0013_remove_signature_docid_signature_type.cpython-312.pyc
+|   |           0014_signature.cpython-312.pyc
+|   |           0015_url.cpython-312.pyc
+|   |           0016_docpermission_docid.cpython-312.pyc
+|   |           0017_alter_docpermission_docid.cpython-312.pyc
+|   |           0018_document_created_date.cpython-312.pyc
+|   |           0019_alter_document_created_date.cpython-312.pyc
+|   |           0020_document_due_date.cpython-312.pyc
+|   |           0021_alter_document_due_date.cpython-312.pyc
+|   |           0022_remove_document_due_date.cpython-312.pyc
+|   |           0023_test_document_due_date.cpython-312.pyc
+|   |           0024_alter_document_due_date.cpython-312.pyc
+|   |           0025_customuser_mfa.cpython-312.pyc
+|   |           0026_remark.cpython-312.pyc
+|   |           0027_rename_document_remark_docid_and_more.cpython-312.pyc
+|   |           __init__.cpython-312.pyc
+|   |           
+|   +---static
+|   |   +---css
+|   |   |       course.css
+|   |   |       style.css
+|   |   |       
+|   |   +---images
+|   |   |       bg.jpg
+|   |   |       ???? ?? ??.jpg
+|   |   |       
+|   |   \---js
+|   |           bootstrap.min.js
+|   |           jquery.min.js
+|   |           main.js
+|   |           popper.js
+|   |           
+|   +---templates
+|   |   |   403.html
+|   |   |   404.html
+|   |   |   500.html
+|   |   |   
+|   |   \---esign
+|   |           detail.html
+|   |           display_pdf.html
+|   |           index.html
+|   |           manage.html
+|   |           sign.html
+|   |           signer.html
+|   |           test.html
+|   |           user_login.html
+|   |           verify_totp.html
+|   |           xlogin.html
+|   |           
+|   \---__pycache__
+|           admin.cpython-312.pyc
+|           apps.cpython-312.pyc
+|           custom_backend.cpython-312.pyc
+|           decorators.cpython-312.pyc
+|           forms.cpython-312.pyc
+|           models.cpython-312.pyc
+|           urls.cpython-312.pyc
+|           views.cpython-312.pyc
+|           __init__.cpython-312.pyc
+|           
++---media
+|   +---pdfs
+|   |       Appendix_B__Answers_to_Written_Labs___ISC2_CISSP_Certified_Information_Systems_Secu_VMhkyB0.pdf
+|   |       Blockchain_in_Action_Bina_Ramamurthy_Z-Library.pdf
+|   |       Cambridge_15_-_Full_Version.pdf
+|   |       Cambridge_15_-_Full_Version_0d50b9q.pdf
+|   |       Cambridge_15_-_Full_Version_3VfTox9.pdf
+|   |       Cambridge_15_-_Full_Version_9SpkbNc.pdf
+|   |       Cambridge_15_-_Full_Version_Dz7kN4i.pdf
+|   |       Cambridge_15_-_Full_Version_FJnb83p.pdf
+|   |       Cambridge_15_-_Full_Version_gggRhAZ.pdf
+|   |       Cambridge_15_-_Full_Version_hvmXdfS.pdf
+|   |       Cambridge_15_-_Full_Version_OvD6reC.pdf
+|   |       Cambridge_15_-_Full_Version_QCqfNVW.pdf
+|   |       Cambridge_15_-_Full_Version_UQIl3Oc.pdf
+|   |       Cambridge_15_-_Full_Version_UXKww4w.pdf
+|   |       Cambridge_15_-_Full_Version_VgF8n6o.pdf
+|   |       Cambridge_15_-_Full_Version_ZH3fsSb.pdf
+|   |       Cambridge_IELTS_15_Academic_Cambridge_Assessment_English_z-lib.org.pdf
+|   |       Cambridge_IELTS_15_Academic_Cambridge_Assessment_English_z-lib.org_uy7R7fM.pdf
+|   |       default.pdf
+|   |       System-Development-Method-With-The-Prototype-Method.pdf
+|   |       Tunku_Abdul_Rahman_University_of_Management_and_Technology_TAR_UMT_-_Student_Intranet.pdf
+|   |       Tunku_Abdul_Rahman_University_of_Management_and_Technology_TAR_UMT_-_Student_Intran_Xs7fVdR.pdf
+|   |       
+|   \---signatures
+|           astra_avatar.png
+|           
+\---myproject
+    |   asgi.py
+    |   settings.py
+    |   urls.py
+    |   wsgi.py
+    |   __init__.py
+    |   
+    \---__pycache__
+            settings.cpython-312.pyc
+            urls.cpython-312.pyc
+            wsgi.cpython-312.pyc
+            __init__.cpython-312.pyc
+            

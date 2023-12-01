@@ -1,5 +1,6 @@
 from django import forms
 from .models import *
+from django.contrib.auth.forms import UserCreationForm, UserChangeForm
 
 class LoginForm(forms.Form):
     UID = forms.CharField(max_length=100)
@@ -19,3 +20,16 @@ class OrganizationForm(forms.ModelForm):
     class Meta:
         model = Organization
         fields = ('orgID','name','email','address','phone_no')
+
+class CustomUserCreationForm(UserCreationForm):
+
+    class Meta:
+        model = CustomUser
+        fields = ("email", "username",  "position")
+
+
+class CustomUserChangeForm(UserChangeForm):
+
+    class Meta:
+        model = CustomUser
+        fields = ("email",)

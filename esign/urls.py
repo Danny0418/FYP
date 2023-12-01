@@ -15,6 +15,8 @@ urlpatterns = [
 
     path('logout/', views.logout_request, name='logout'),
     path('save_pdf_to_db/', views.save_pdf_to_db, name='save_pdf_to_db'),
+    # path('add_signature_to_pdf/', views.add_signature_to_pdf, name='add_signature_to_pdf'),
+    path('add_image_signature/', views.add_image_signature, name='add_image_signature'),
 
     path('management/<str:hashed_url>/', views.management, name='management'),
     path('update_document_title/<str:document_id>/', views.update_document_title, name='update_document_title'),
@@ -23,9 +25,11 @@ urlpatterns = [
     path('add_remark/', views.add_remark, name='add_remark'),
 
     path('get_names_emails/', views.get_names_emails_for_company, name='get_names_emails'),
-    path('detail/<str:pk>/', views.detail, name='detail'),
-    path('sign/<str:pk>/', views.sign, name='sign'),
+    path('sign/<str:hashed_url>/', views.sign, name='sign'),
     path('check_session/', views.check_session, name='check_session'),
+
+
+    # path('test/', views.test, name='test'),
 ] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 
 handler403 = "esign.views.handler403"  # Set the handler403 for the app
