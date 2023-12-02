@@ -13,6 +13,12 @@
 <!-- PDF.js CDN -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.11.338/pdf.min.js"></script>
 <!-- <link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.0.189/pdf_viewer.min.css"> -->
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous">
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+        integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
 
 <script>
   // Set worker source for PDF.js
@@ -79,7 +85,7 @@
 </head>
 <style>
   /* CSS for Modal */
-.modal {
+/* .modal {
   display: none;
   position: fixed;
   z-index: 1;
@@ -89,14 +95,14 @@
   height: 100%;
   background-color: rgba(0,0,0,0.4);
   overflow: scroll;
-}
+} */
 
 .modal-content {
   background-color: #fefefe;
   margin: 5% auto;
   padding: 20px;
   border: 1px solid #888;
-  width: 60%;
+  /* width: 60%; */
 }
 
 /* CSS for Modal Header */
@@ -127,7 +133,37 @@
   cursor: pointer;
 }
 
+.drop-zone {
+    border: 5px dashed #000;
+    border-radius: 5px;
+    text-align: center;
+    padding: 20px;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    width: 80%;
+    margin: auto;
+}
 
+.drop-zone:hover {
+    background-color: #f8f9fa;
+}
+
+.drop-zone.dragover {
+    background-color: #e9ecef;
+}
+
+.drop-zone i {
+    margin-bottom: 10px;
+}
+
+.file-upload {
+    color: #007bff;
+    text-decoration: underline;
+    cursor: pointer;
+}
 </style>
 
 <body>
@@ -158,19 +194,35 @@
 
 <!-- Bootstrap Modal for PDF Upload -->
 <div class="modal" id="uploadModal">
-  <div class="modal-dialog modal-lg">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title">Upload Document</h5>
-        <button type="button" class="close" data-dismiss="modal">&times;</button>
+        <h2 class="modal-title">Upload Document</h2>
+        <button type="button" class="close" data-dismiss="modal" style="display: none;">&times;</button>
       </div>
       <div class="modal-body">
-        <input type="file" id="fileInput" class="form-control-file">
-        <progress id="uploadProgress" value="0" max="100"></progress>
-        <div id="uploadMessage"></div>
-        <div id="errorMessage" class="text-danger" style="display: none;">Please upload a PDF file.</div>
-        <div id="successMessage" class="alert alert-success" style="display: none;">Upload successful!</div>
-        <canvas id="pdfCanvas"></canvas> <!-- Element to display PDF -->
+        <div id="dropZone" class="drop-zone py-5">
+          <input type="file" id="fileInput" class="form-control-file" hidden>
+          <span style="font-size: 100px;"><i class="fa-solid fa-file-circle-plus"></i></span>
+          <p style="font-size: 30px;">Drag and drop a file here or <span class="file-upload">click to upload</span>.</p>
+        </div>
+        <div class="row d-flex justify-content-center mt-2">
+          <progress id="uploadProgress" value="0" max="100" style="width: 80%; display: none;"></progress>
+        </div>
+        <div class="row d-flex justify-content-center mt-2">
+          <div id="uploadMessage"  style="font-size: 20px;"></div>
+        </div>
+        
+        <div class="row d-flex justify-content-center mt-2">
+          <div id="successMessage" class="alert alert-success" style="display: none;">Document uploaded successfully.</div>
+          <div id="errorMessage" class="alert alert-danger" style="display: none;">Please upload a PDF file.</div>
+        </div>
+        <div class="row">
+          <div style="height: 60%;" class="d-flex justify-content-center">
+            <canvas id="pdfCanvas" height="100%"></canvas> <!-- Element to display PDF -->
+          </div>
+        </div>
+        
       </div>
       <div class="modal-footer">
         <button id="createDocumentBtn" class="btn btn-success" style="display: none;">Create Document</button>
@@ -186,7 +238,6 @@
 <script>
   // Get the modal
 const modal = document.getElementById("uploadModal");
-const errorMessage = document.getElementById("errorMessage");
 
 // Get the button that opens the modal
 const createButton = document.getElementById("createButton");
@@ -202,49 +253,71 @@ modal.querySelector(".close").addEventListener("click", function() {
   modal.style.display = "none";
 });
 
-// Simulate file upload process
-document.getElementById("fileInput").addEventListener("change", function() {
-  const progressBar = document.getElementById("uploadProgress");
-  const uploadMessage = document.getElementById("uploadMessage");
-  const successMessage = document.getElementById("successMessage");
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const progressBar = document.getElementById("uploadProgress");
+const uploadMessage = document.getElementById("uploadMessage");
+const successMessage = document.getElementById("successMessage");
+const errorMessage = document.getElementById("errorMessage");
 
-  const file = this.files[0];
-  if (file) {
-    if (file.type === "application/pdf") {
-      errorMessage.style.display = "none";
-      // Continue with upload logic here
-      // Simulate upload progress
-    let progress = 0;
-    const interval = setInterval(function() {
-      progress += 10;
-      if (progress <= 100) {
-        progressBar.value = progress;
-      } else {
-        clearInterval(interval);
-      // Simulate successful upload with a delay
-      setTimeout(function() {
-        successMessage.style.display = "block";
-        createDocumentBtn.style.display = "block";
-        // Display the first page of the PDF
-        renderPDF(file);
+dropZone.addEventListener('click', () => fileInput.click());
 
-
-        setTimeout(function() {
-          successMessage.style.display = "none";
-        }, 5000); // Hide success message after 3 seconds
-      }, 2000);
-        setTimeout(function() {
-          // Display PDF details after delay
-          uploadMessage.innerText = `Title: ${file.name}`;
-          // Add logic to display PDF preview and create document button here
-        }, 2000); // 2 seconds delay
-      }
-    }, 500); // 0.5 seconds interval
-    } else {
-      errorMessage.style.display = "block";
-    }
-  }
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
 });
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+
+    const files = e.dataTransfer.files;
+    if (files.length) {
+        handleFileUpload(files[0]);
+    }
+});
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) {
+        handleFileUpload(fileInput.files[0]);
+    }
+});
+
+function handleFileUpload(file) {
+    if (file.type === "application/pdf") {
+        errorMessage.style.display = "none";
+        var dropzone = document.getElementById("dropZone");
+        dropzone.style.display = "none";
+        progressBar.style.display = "block";
+        let progress = 0;
+        const interval = setInterval(function() {
+            progress += 10;
+            if (progress <= 100) {
+                progressBar.value = progress;
+            } else {
+                clearInterval(interval);
+                setTimeout(function() {
+                    successMessage.style.display = "block";
+                    createDocumentBtn.style.display = "block";
+                    renderPDF(file);
+                    setTimeout(function() {
+                        successMessage.style.display = "none";
+                    }, 5000); // Hide success message after 5 seconds
+                }, 2000);
+                setTimeout(function() {
+                    uploadMessage.innerHTML = `<b>Title:</b> ${file.name}`;
+                    progressBar.style.display = "none";
+                }, 2000);
+            }
+        }, 500);
+    } else {
+        errorMessage.style.display = "block";
+    }
+}
 
 // Render the PDF using PDF.js
 function renderPDF(file) {
@@ -258,7 +331,7 @@ function renderPDF(file) {
       pdf.getPage(1).then(function(page) {
         const canvas = document.getElementById("pdfCanvas");
         const context = canvas.getContext("2d");
-        const viewport = page.getViewport({ scale: 1.5 });
+        const viewport = page.getViewport({ scale: 1 });
         
         canvas.width = viewport.width;
         canvas.height = viewport.height;
