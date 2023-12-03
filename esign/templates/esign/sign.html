@@ -465,6 +465,40 @@
             });
          });
       });
+
+
+
+      // JavaScript code
+document.addEventListener('DOMContentLoaded', function () {
+    var pdfViewer = document.getElementById('pdfViewer');
+    pdfViewer.addEventListener('click', function (event) {
+        var target = event.target;
+        if (target.classList.contains('page-button')) {
+            var pageNum = target.parentElement.parentElement.id.split('-')[1];
+            signPage(pageNum);
+        }
+    });
+});
+
+function signPage(pageNum) {
+    $.ajax({
+        url: '/esign/add_image_signature/', // URL to your Django view
+        type: 'POST',
+        headers: {
+                  'X-CSRFToken': csrftoken  // Add the CSRF token to the request headers
+               },
+        data: { 'page_num': pageNum, 'pdf_path': '{{ document.pdf_file }}' },
+        success: function (response) {
+            console.log('Page signed successfully: ' + pageNum);
+            // Handle the successful response here
+        },
+        error: function (xhr, status, error) {
+            console.error('Error signing page: ' + error);
+            // Handle the error here
+        }
+    });
+}
+
    </script>
 </body>
 

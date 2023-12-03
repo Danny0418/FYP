@@ -225,55 +225,55 @@ from pyhanko.sign.fields import SigFieldSpec
 
 
 def add_image_signature(request):
-    # Assuming 'pdf_file' is the uploaded PDF file from a Django form
-    pdf_file = os.path.join(settings.MEDIA_ROOT, 'pdfs', 'Tunku_Abdul_Rahman_University_of_Management_and_Technology_TAR_UMT_-_Student_Intran_Xs7fVdR.pdf')
-    image_path = os.path.join(settings.MEDIA_ROOT, 'signatures', 'astra_avatar.png')
+    if request.method == 'POST':
+        page_num = int(request.POST.get('page_num'))  # Get the page number from the submitted form data
+        pdf_path = request.POST.get('pdf_path')  # Get the path to the PDF file from the submitted form data
 
-    # Setup the signature configuration
-    # (Refer to PyHanko documentation for the exact configuration)
-    signer = signers.SimpleSigner.load('media/cert/private_key.pem', "media/cert/certificate.pem", key_passphrase=b"12345")
-    
+        # Assuming 'pdf_file' is the uploaded PDF file from a Django form
+        pdf_file = os.path.join(settings.MEDIA_ROOT, pdf_path)
+        image_path = os.path.join(settings.MEDIA_ROOT, 'signatures', 'astra_avatar.png')
 
-    # Determine the dimensions of the PDF (assuming A4 size for this example)
-    pdf_width, pdf_height = 595, 842  # A4 dimensions in points
-    signature_box_width, signature_box_height = 200, 100  # Adjust as needed
+        # Setup the signature configuration
+        # (Refer to PyHanko documentation for the exact configuration)
+        signer = signers.SimpleSigner.load('media/cert/private_key.pem', "media/cert/certificate.pem", key_passphrase=b"12345")
+        
 
-    # Calculate the bottom right coordinates
-    llx = pdf_width - signature_box_width  # Lower-left x-coordinate
-    lly = 0  # Lower-left y-coordinate
-    urx = pdf_width  # Upper-right x-coordinate
-    ury = signature_box_height  # Upper-right y-coordinate
+        # Determine the dimensions of the PDF (assuming A4 size for this example)
+        pdf_width, pdf_height = 595, 842  # A4 dimensions in points
+        signature_box_width, signature_box_height = 200, 100  # Adjust as needed
 
-    # Adjust the layout rule for the stamp
-    layout_rule = SimpleBoxLayoutRule(
-        x_align=AxisAlignment.ALIGN_MID,  # or LEFT/RIGHT as per your need
-        y_align=AxisAlignment.ALIGN_MIN,  # Aligns content to the top
-        margins=Margins(0, 0, 0, 40)  # Adjust margins as needed
-    )
+        # Calculate the bottom right coordinates
+        llx = pdf_width - signature_box_width  # Lower-left x-coordinate
+        lly = 0  # Lower-left y-coordinate
+        urx = pdf_width  # Upper-right x-coordinate
+        ury = signature_box_height  # Upper-right y-coordinate
 
-    inner_layout_rule = SimpleBoxLayoutRule(
-        x_align=AxisAlignment.ALIGN_MID,  # or LEFT/RIGHT as per your need
-        y_align=AxisAlignment.ALIGN_MIN,  # Aligns content to the top
-        margins=Margins(0, 0, 0, 0)  # Adjust margins as needed
-    )
+        # Adjust the layout rule for the stamp
+        layout_rule = SimpleBoxLayoutRule(
+            x_align=AxisAlignment.ALIGN_MID,  # or LEFT/RIGHT as per your need
+            y_align=AxisAlignment.ALIGN_MIN,  # Aligns content to the top
+            margins=Margins(0, 0, 0, 40)  # Adjust margins as needed
+        )
 
-    # Read the PDF file
-    with open(pdf_file, 'rb') as pdf_input:
-        reader = PdfFileReader(pdf_input)
-        pdf_reader = PyPDF2.PdfReader(pdf_input)
-        w = IncrementalPdfFileWriter(pdf_input)
-        # Loop through each page and add a signature field
-        for page_num in range(len(pdf_reader.pages)):
-            # Calculate signature field position for each page
-            # Adjust these values as needed
-            llx = pdf_width - signature_box_width
-            lly = 0
-            urx = pdf_width
-            ury = signature_box_height
+        inner_layout_rule = SimpleBoxLayoutRule(
+            x_align=AxisAlignment.ALIGN_MID,  # or LEFT/RIGHT as per your need
+            y_align=AxisAlignment.ALIGN_MIN,  # Aligns content to the top
+            margins=Margins(0, 0, 0, 0)  # Adjust margins as needed
+        )
+
+        # Read the PDF file
+        with open(pdf_file, 'rb') as pdf_input:
+            reader = PdfFileReader(pdf_input)
+            pdf_reader = PyPDF2.PdfReader(pdf_input)
+            w = IncrementalPdfFileWriter(pdf_input)
+            # Loop through each page and add a signature field
+            # for page_num in range(len(pdf_reader.pages)):
+                # Calculate signature field position for each page
+                # Adjust these values as needed
             signature_meta = signers.PdfSignatureMetadata(field_name=f'Signature_{page_num}')
             fields.append_signature_field(
                 w, sig_field_spec=SigFieldSpec(
-                    f'Signature_{page_num}', box=(llx, lly, urx, ury), on_page=page_num
+                    f'Signature_{page_num}', box=(llx, lly, urx, ury), on_page=page_num-1
                 )
             )
             pdf_signer = signers.PdfSigner(
@@ -292,7 +292,9 @@ def add_image_signature(request):
             with open('media/signed/document-signed.pdf', 'wb') as outf:
                 pdf_signer.sign_pdf(w, output=outf)
 
-    return HttpResponse("PDF signed successfully")
+        return JsonResponse({'status': 'success', 'message': 'Page signed successfully'})
+    
+    return JsonResponse({'status': 'error', 'message': 'Invalid request method'})
 
 
 

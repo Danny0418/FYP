@@ -110,7 +110,7 @@ class DocPermission(models.Model):
     dpID = models.CharField(max_length=6, primary_key=True)
     userID = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     docID = models.ForeignKey('Document', on_delete=models.CASCADE)
-    # docID = models.CharField(max_length=6, null=True, blank=True)
+    priority = models.IntegerField(null=True, blank=True)
     type = models.CharField(max_length=50)
 
     def save(self, *args, **kwargs):
