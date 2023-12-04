@@ -23,6 +23,7 @@ from pyhanko.sign import fields
 from pyhanko.sign.signers import SimpleSigner
 from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
 # from pyhanko.stamp import ImageStampStyle
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 
 # def add_image_signature(request):
 #     if request.method == 'POST' and request.FILES['pdf_file'] and request.FILES['image_file']:
@@ -301,24 +302,59 @@ def add_image_signature(request):
 
 
 @login_required(login_url='esign:xlogin')
+# def index(request):
+#     user_id = request.session['user_id']
+#     # Get all documents for the user
+#     documents = []
+#     # documents = Document.objects.filter(docID__in=DocPermission.objects.filter(userID_id=user_id).values_list('docID_id', flat=True))
+
+#     # get all the url for the documents
+#     urls = URL.objects.filter(userID_id=user_id).values_list('url', flat=True)
+
+#     for user_id in urls:
+#         # get documents for the user
+#         documents.append(Document.objects.get(docID=URL.objects.get(url=user_id).docID_id))
+
+#     user_id = request.session['user_id']
+
+#     # zip the documents and urls together
+#     documents_urls = zip(documents, urls)
+#     return render(request, 'esign/index.html', {'documents_urls': documents_urls, 'user_id': user_id})
+
 def index(request):
+    user_id = request.session.get('user_id')
+
+    if not user_id:
+        return render(request, '404.html', {'error_message': 'User ID not found'})
+
+    try:
+        user = CustomUser.objects.get(userID=user_id)
+        # Get all documents assigned to the user
+        assigned_documents = Document.objects.filter(docpermission__userID=user)
+    except CustomUser.DoesNotExist:
+        return render(request, '404.html', {'error_message': 'User not found'})
+
+    documents_per_page = 5
+    paginator = Paginator(assigned_documents, documents_per_page)
+    page = request.GET.get('page', 1)
+
+    try:
+        documents = paginator.page(page)
+    except PageNotAnInteger:
+        documents = paginator.page(1)
+    except EmptyPage:
+        documents = paginator.page(paginator.num_pages)
+
+    return render(request, 'esign/main.html', {'documents': documents, 'user_id': user_id})
+
+def viewDoc(request, docID):
     user_id = request.session['user_id']
-    # Get all documents for the user
-    documents = []
-    # documents = Document.objects.filter(docID__in=DocPermission.objects.filter(userID_id=user_id).values_list('docID_id', flat=True))
+    urls = URL.objects.get(docID_id=docID, userID_id=user_id)
+    hashed_url = urls.url
 
-    # get all the url for the documents
-    urls = URL.objects.filter(userID_id=user_id).values_list('url', flat=True)
+    return redirect('esign:management', hashed_url=hashed_url)
 
-    for user_id in urls:
-        # get documents for the user
-        documents.append(Document.objects.get(docID=URL.objects.get(url=user_id).docID_id))
 
-    user_id = request.session['user_id']
-
-    # zip the documents and urls together
-    documents_urls = zip(documents, urls)
-    return render(request, 'esign/index.html', {'documents_urls': documents_urls, 'user_id': user_id})
 
 # Error page for non-logged in users
 def xlogin(request):

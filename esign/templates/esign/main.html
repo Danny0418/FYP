@@ -1,0 +1,479 @@
+{% load static %}
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>File List</title>
+        <link rel="stylesheet" type="text/css" href="{% static 'css/index.css' %}">
+        <!-- jQuery CDN -->
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <!-- PDF.js CDN -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <!-- Bootstrap CDN -->
+    <!-- <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet"
+        integrity="sha384-T3c6CoIi6uLrA9TneNEoa7RxnatzjcDSCmG1MXxSR1GAsXEV/Dwwykc2MPK8M2HN" crossorigin="anonymous"> -->
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"
+        integrity="sha512-z3gLpd7yknf1YoNbCzqRKc4qyor8gaKU1qmn+CShxbuBusANI9QpRohGBreCFkKxLhei6S9CQXFEbbKuqLg0DA=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+        <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/js/bootstrap.min.js"></script>
+    </head> 
+    <style>
+        /* CSS for Modal */
+      /* .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0,0,0,0.4);
+        overflow: scroll;
+      } */
+      
+      .modal-content {
+        background-color: #fefefe;
+        margin: 5% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        /* width: 60%; */
+      }
+      
+      /* CSS for Modal Header */
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #ccc;
+      }
+      
+      .modal-title {
+        margin: 0;
+        text-align: center;
+        flex-grow: 1;
+      }
+      
+      .close {
+        color: #aaa;
+        float: right;
+        font-size: 28px;
+        font-weight: bold;
+      }
+      
+      .close:hover,
+      .close:focus {
+        color: black;
+        text-decoration: none;
+        cursor: pointer;
+      }
+      
+      .drop-zone {
+          border: 5px dashed #000;
+          border-radius: 5px;
+          text-align: center;
+          padding: 20px;
+          cursor: pointer;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          justify-content: center;
+          width: 80%;
+          margin: auto;
+      }
+      
+      .drop-zone:hover {
+          background-color: #f8f9fa;
+      }
+      
+      .drop-zone.dragover {
+          background-color: #e9ecef;
+      }
+      
+      .drop-zone i {
+          margin-bottom: 10px;
+      }
+      
+      .file-upload {
+          color: #007bff;
+          text-decoration: underline;
+          cursor: pointer;
+      }
+      </style>
+    <body>
+        <div class="sidebar">
+            <a class="active">All Documents</a>
+            <button id="createButton" class="btn btn-primary" data-toggle="modal" data-target="#uploadModal">Create</button>
+            
+            <a href="#about">Drafts</a>
+            <a href="#news">Archived</a>
+            <a href="#contact">Deleted</a>
+        </div>
+        <!-- Bootstrap Modal for PDF Upload -->
+<div class="modal" id="uploadModal">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2 class="modal-title">Upload Document</h2>
+        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+      </button>
+      </div>
+      <div class="modal-body">
+        <div id="dropZone" class="drop-zone py-5">
+          <input type="file" id="fileInput" class="form-control-file" hidden>
+          <span style="font-size: 100px;"><i class="fa-solid fa-file-circle-plus"></i></span>
+          <p style="font-size: 30px;">Drag and drop a file here or <span class="file-upload">click to upload</span>.</p>
+        </div>
+        <div class="row d-flex justify-content-center mt-2">
+          <progress id="uploadProgress" value="0" max="100" style="width: 80%; display: none;"></progress>
+        </div>
+        <div class="row d-flex justify-content-center mt-2">
+          <div id="uploadMessage"  style="font-size: 20px;"></div>
+        </div>
+        
+        <div class="row d-flex justify-content-center mt-2">
+          <div id="successMessage" class="alert alert-success" style="display: none;">Document uploaded successfully.</div>
+          <div id="errorMessage" class="alert alert-danger" style="display: none;">Please upload a PDF file.</div>
+        </div>
+        <div class="row">
+          <div style="height: 60%;" class="d-flex justify-content-center">
+            <canvas id="pdfCanvas" height="100%"></canvas> <!-- Element to display PDF -->
+          </div>
+        </div>
+        
+      </div>
+      <div class="modal-footer">
+        <button id="createDocumentBtn" class="btn btn-success" style="display: none;">Create Document</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+        <div class="container">
+            <input type="text" id="searchBar" placeholder="Search.." oninput="searchTable()">
+            <div id="fileList">
+                <h1>Document List</h1>
+                <h3 id="time"></h3>
+                <table id="fileTable">
+                    <thead>
+                        <tr>
+                            <th>Title</th>
+                            <th>Created Date</th>
+                            <th>Expire Date</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if documents %}
+                            {% for document in documents %}
+                                <tr>
+                                    <td><a href="javascript:void(0);" onclick="showDocumentDetails(this, '{{ document.docID }}')">{{ document.title }}</a></td>
+                                    <td>{{ document.created_date }}</td>
+                                    <td>{{ document.due_date }}</td>
+                                    <td>{{ document.get_status }}</td>
+                                    <td><a href="{% url 'esign:viewDoc' document.docID %}">View Documents</a></td>
+                                </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr>
+                                <td colspan="4">No documents available.</td>
+                            </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="documentDetails">
+                <h2>Document Details</h2>
+                <p id="documentTitles"></p>
+                <p>Created Date: <span id="createdDate"></span></p>
+                <p>Due Date: <span id="dueDate"></span></p>
+                <p>Username: <span id="username"></span></p>
+                <p>Email: <span id="email"></span></p>
+            </div>
+            <div class="pagination">
+                    <span class="step-links">
+                        {% if documents.has_previous %}
+                            <a href="?page=1">&laquo; first</a>
+                            <a href="?page={{ documents.previous_page_number }}">previous</a>
+                        {% endif %}
+                
+                        <span class="current">
+                            Page {{ documents.number }} of {{ documents.paginator.num_pages }}.
+                        </span>
+                
+                        {% if documents.has_next %}
+                            <a href="?page={{ documents.next_page_number }}">next</a>
+                            <a href="?page={{ documents.paginator.num_pages }}">last &raquo;</a>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <script>
+             function displayTime() {
+        // Get the current date and time
+        const now = new Date();
+
+        // Get the user's timezone offset in minutes
+        const timezoneOffset = now.getTimezoneOffset();
+
+        // Calculate the timezone offset in hours and minutes
+        const offsetHours = Math.floor(Math.abs(timezoneOffset) / 60);
+        const offsetMinutes = Math.abs(timezoneOffset) % 60;
+
+        // Determine if the timezone is ahead or behind UTC
+        const offsetSign = timezoneOffset >= 0 ? '-' : '+';
+
+        // Format the timezone offset as HH:mm
+        const formattedOffset = `${offsetSign}${offsetHours.toString().padStart(2, '0')}:${offsetMinutes.toString().padStart(2, '0')}`;
+
+        // Format the date and time as a string
+        const formattedTime = now.toLocaleString() + ` (UTC${formattedOffset})`;
+
+        // Display the formatted time in the HTML element with id="time"
+        document.getElementById('time').innerText = formattedTime;
+    }
+
+    // Call the displayTime function to initially display the time
+    displayTime();
+
+    // Update the displayed time every second (1000 milliseconds)
+    setInterval(displayTime, 1000);
+        </script>
+            <script>
+        // Get the modal
+const modal = document.getElementById("uploadModal");
+
+// Get the button that opens the modal
+const createButton = document.getElementById("createButton");
+const createDocumentBtn = document.getElementById("createDocumentBtn");
+
+// When the user clicks the button, open the modal
+createButton.addEventListener("click", function() {
+  modal.style.display = "block";
+});
+
+// When the user clicks on the close button, close the modal
+modal.querySelector(".close").addEventListener("click", function() {
+  modal.style.display = "none";
+});
+
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const progressBar = document.getElementById("uploadProgress");
+const uploadMessage = document.getElementById("uploadMessage");
+const successMessage = document.getElementById("successMessage");
+const errorMessage = document.getElementById("errorMessage");
+
+dropZone.addEventListener('click', () => fileInput.click());
+
+dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+});
+
+dropZone.addEventListener('dragleave', () => {
+    dropZone.classList.remove('dragover');
+});
+
+dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+
+    const files = e.dataTransfer.files;
+    if (files.length) {
+        handleFileUpload(files[0]);
+    }
+});
+
+fileInput.addEventListener('change', () => {
+    if (fileInput.files.length) {
+        handleFileUpload(fileInput.files[0]);
+    }
+});
+
+function handleFileUpload(file) {
+    if (file.type === "application/pdf") {
+        errorMessage.style.display = "none";
+        var dropzone = document.getElementById("dropZone");
+        dropzone.style.display = "none";
+        progressBar.style.display = "block";
+        let progress = 0;
+        const interval = setInterval(function() {
+            progress += 10;
+            if (progress <= 100) {
+                progressBar.value = progress;
+            } else {
+                clearInterval(interval);
+                setTimeout(function() {
+                    successMessage.style.display = "block";
+                    createDocumentBtn.style.display = "block";
+                    renderPDF(file);
+                    setTimeout(function() {
+                        successMessage.style.display = "none";
+                    }, 5000); // Hide success message after 5 seconds
+                }, 2000);
+                setTimeout(function() {
+                    uploadMessage.innerHTML = `<b>Title:</b> ${file.name}`;
+                    progressBar.style.display = "none";
+                }, 2000);
+            }
+        }, 500);
+    } else {
+        errorMessage.style.display = "block";
+    }
+}
+
+// Render the PDF using PDF.js
+function renderPDF(file) {
+  const fileReader = new FileReader();
+  fileReader.onload = function(event) {
+    const pdfData = new Uint8Array(event.target.result);
+    
+    // Use PDF.js to render the PDF
+    pdfjsLib.getDocument({ data: pdfData }).promise.then(function(pdf) {
+      // Render the first page
+      pdf.getPage(1).then(function(page) {
+        const canvas = document.getElementById("pdfCanvas");
+        const context = canvas.getContext("2d");
+        const viewport = page.getViewport({ scale: 1 });
+        
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        page.render({
+          canvasContext: context,
+          viewport: viewport
+        });
+      });
+    });
+  };
+  fileReader.readAsArrayBuffer(file);
+}
+
+
+
+
+// Function to get the CSRF token from the cookie
+function getCSRFToken() {
+    const cookieValue = document.cookie
+        .split('; ')
+        .find(row => row.startsWith('csrftoken='))
+        .split('=')[1];
+    return cookieValue;
+}
+
+// Use the CSRF token in AJAX requests
+const csrftoken = getCSRFToken();
+
+// Event listener for "Create Document" button click
+createDocumentBtn.addEventListener("click", function() {
+  // Send the PDF file data to Django for saving
+  const file = document.getElementById("fileInput").files[0];
+  const formData = new FormData();
+  formData.append('pdf_file', file);
+
+  fetch('/esign/save_pdf_to_db/', {
+    method: 'POST',
+    headers: {
+      'X-CSRFToken': csrftoken  // Add the CSRF token to the request headers
+    },
+    body: formData
+  })
+  .then(response => {
+    if (response.ok) {
+      return response.json(); // Extract JSON data on success
+    } else {
+      throw new Error('File creation failed');
+    }
+  })
+  .then(data => {
+    const newURL = data.newURL; // Assuming the JSON response contains the newest primary key
+    if (newURL) {
+      window.location.href = `/esign/management/${newURL}/`; // Redirect with newest primary key
+    } else {
+      throw new Error('Primary key not found');
+    }
+  })
+  .catch(error => {
+    console.error('Error:', error);
+    alert('Failed to create document');
+  });
+});
+
+function searchTable() {
+    // Get the search term
+    const searchTerm = document.getElementById('searchBar').value.toLowerCase();
+
+    // Get the file table and its rows
+    const fileTable = document.getElementById('fileTable');
+    const rows = fileTable.getElementsByTagName('tr');
+
+    // Loop through the rows and hide those that don't match the search term
+    for (let i = 0; i < rows.length; i++) {
+        const titleCell = rows[i].getElementsByTagName('td')[0];
+        if (titleCell) {
+            const titleText = titleCell.textContent.toLowerCase();
+            if (titleText.includes(searchTerm)) {
+                rows[i].style.display = '';
+            } else {
+                rows[i].style.display = 'none';
+            }
+        }
+    }
+}
+
+//Show document details
+function showDocumentDetails(clickedRow, fileId) {
+    const documentDetails = document.getElementById('documentDetails');
+    const documentTitles = document.getElementById('documentTitles');
+    const createdDate = document.getElementById('createdDate');
+    const dueDate = document.getElementById('dueDate');
+    const username = document.getElementById('username');
+    const email = document.getElementById('email');
+
+    const assignedUsersListElement = document.getElementById('assignedUsersList');
+
+    documentDetails.style.display = 'block';
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', `/esign/get_document_details/?doc_id=${fileId}`, true);
+    xhr.onreadystatechange = function () {
+        if (xhr.readyState == 4 && xhr.status == 200) {
+            const response = JSON.parse(xhr.responseText);
+            console.log('File details element:', response);
+
+            const { document, assigned_users } = response;
+
+            documentTitles.textContent = `${document.title}`;
+            createdDate.textContent = `${document.created_date}`;
+            dueDate.textContent = `${document.due_date}`;
+            username.textContent = `${assigned_users.map(user => user.username).join(', ')}`;
+            email.textContent = `${assigned_users.map(user => user.email).join(', ')}`;
+
+
+            assignedUsersListElement.innerHTML = ''; // Clear previous content
+
+            assigned_users.forEach(user => {
+                const listItem = document.createElement('li');
+                listItem.textContent = `UserID: ${user.userID}, Username: ${user.username}, Email: ${user.email}, Position: ${user.position}`;
+                assignedUsersListElement.appendChild(listItem);
+            });
+        } else if (xhr.readyState == 4 && xhr.status != 200) {
+            console.log('Error fetching file details', xhr.status, xhr.statusText);
+        }
+    };
+    xhr.send();
+}
+        </script>
+
+
+
+
+
+
+    </body>
+</html>

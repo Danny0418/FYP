@@ -8,6 +8,7 @@ app_name = 'esign'
 urlpatterns = [
     # path('', views.index, name='index'),
     path('', views.index, name='index'),
+    path('viewDoc/<str:docID>', views.viewDoc, name='viewDoc'),
     path('xlogin/', views.xlogin, name='xlogin'),
     path('login/', views.login_request, name='login'),
     path('resend_totp/', views.resend_totp, name='resend_totp'),
