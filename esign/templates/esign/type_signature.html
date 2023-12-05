@@ -1,0 +1,88 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport"
+            content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
+        <title>Signature Maker</title>
+        <link rel="stylesheet" type="text/css"
+            href="{% static 'css/type_signature.css' %}">
+        <link rel="stylesheet" type="text/css"
+            href="{% static 'css/draw_signature.css' %}">
+        <link rel="stylesheet"
+            href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+        <style>
+     #signature-options {
+            display: flex;
+            justify-content: center;
+        }
+
+        .signature-button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 0 10px;
+            cursor: pointer;
+        }
+  </style>
+    </head>
+    <body>
+
+        <div id="signature-pad" class="signature-pad">
+            <div id="signature-options"
+                style="text-align: center; padding: 20px;">
+                <a href="{% url 'esign:type' %}">
+                    <button class="signature-button" id="type-signature-button">Type
+                        Signature</button>
+                </a>
+                <a href="{% url 'esign:draw' %}">
+                    <button class="signature-button" id="draw-signature-button">Draw
+                        Signature</button>
+                </a>
+            </div>
+            <div class="signature-pad--body">
+                <h1>Signature Maker</h1>
+                <div class="form">
+                    <input type="text" id="nameInput" placeholder="Your Name">
+                    <select id="fontSelect">
+                        <option value="Arial, sans-serif">Arial</option>
+                        <option value="Times New Roman, serif">Times New Roman</option>
+                        <option value="Verdana, sans-serif">Verdana</option>
+                        <option value="Courier New, monospace">Courier New</option>
+                        <option value="Georgia, serif">Georgia</option>
+                        <option value="Trebuchet MS, sans-serif">Trebuchet MS</option>
+                        <option value="Comic Sans MS, cursive">Comic Sans MS</option>
+                        <option value="Impact, sans-serif">Impact</option>
+                        <option value="Lucida Sans Unicode, sans-serif">Lucida Sans Unicode</option>
+                    </select>
+                    <button id="generateButton">Generate Signature</button>
+                </div>
+                <div class="signature" id="generatedSignature"></div>
+                <!-- <button id="downloadButton" style="display: none">Download Signature</button> -->
+            </div>
+            <div class="signature-pad--footer">
+
+                <div class="signature-pad--actions">
+                    <div>
+                        <button type="button" class="btn btn-default"
+                            data-action="clear">Clear</button>
+                        <button type="button" class="btn btn-default"
+                            data-action="change-color">Change color</button>
+                    </div>
+                    <div>
+                        <button type="button" class="button save"
+                            data-action="save-svg" hidden=true></button>
+                        <button type="button" class="button save"
+                            data-action="save-png" hidden=true></button>
+                        <button type="button" class="btn btn-primary"
+                            style="background-color:blue" data-action="save-jpg">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>       
+        <script type="text/javascript" src="{% static 'js/type.js'%}"></script>
+    </body>
+</html>

@@ -1,0 +1,69 @@
+{% extends 'esign/base.html' %}
+
+{% block content %}
+<div class="upload-profile-container">
+  <h2>Upload Profile</h2>
+  <form method="post" enctype="multipart/form-data" class="upload-profile-form">
+    {% csrf_token %}
+    <label for="{{ form.bio.id_for_label }}" class="form-label">Bio:</label>
+    {{ form.bio }}
+    {{ form.bio.errors }}
+
+    <label for="{{ form.photo.id_for_label }}" class="form-label">Photo:</label>
+    {{ form.photo }}
+    {{ form.photo.errors }}
+
+    <button type="submit" class="submit-button">Submit</button>
+  </form>
+</div>
+
+  <style>
+  body {
+  font-family: Arial, sans-serif;
+  background-color: #f4f4f4;
+  margin: 0;
+  padding: 0;
+}
+
+.upload-profile-container {
+  max-width: 600px;
+  margin: 50px auto;
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+h2 {
+  color: #333;
+}
+
+.upload-profile-form {
+  margin-top: 20px;
+}
+
+.form-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #333;
+}
+
+input[type="file"] {
+  display: block;
+  margin-bottom: 16px;
+}
+
+.submit-button {
+  background-color: #007bff;
+  color: #fff;
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.submit-button:hover {
+  background-color: #0056b3;
+}
+  </style>
+{% endblock %}

@@ -1,0 +1,23 @@
+{% extends 'esign/base.html' %}
+{% load static %}
+
+{% block scripts %}
+<script type="text/javascript" src="{% static 'js/face_detection.js'%}" defer></script>
+{% endblock scripts %}
+
+{% block content %}
+    <input type="hidden" id="user_id" value="{{ request.session.user_id }}">
+    <section>
+        <div id="verificationMessageContainer"></div>
+    </section>
+    <div class="text-center">
+        <video autoplay="true" id="video-element"></video>
+    </div>
+
+    <div id="img-element"></div>
+
+    <div class="text-center mt-3">
+        <button class="btn btn-primary" id="capture-btn">take photo</button>
+        <button class="btn btn-info" id="reload-btn">reload</button>
+    </div> 
+{% endblock content %}

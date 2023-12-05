@@ -1,0 +1,96 @@
+{% load static %}
+{% csrf_token %}
+<link rel="stylesheet" type="text/css"
+    href="{% static 'css/draw_signature.css' %}">
+
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="description" content="Signature Pad -created by Nijas">
+
+        <meta name="viewport"
+            content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no">
+
+        <meta name="apple-mobile-web-app-capable" content="yes">
+        <meta name="apple-mobile-web-app-status-bar-style" content="black">
+
+        <link rel="stylesheet"
+            href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">        
+        <style>
+            #signature-options {
+            display: flex;
+            justify-content: center;
+            }
+
+            .signature-button {
+                padding: 10px 20px;
+                font-size: 16px;
+                margin: 0 10px;
+                cursor: pointer;
+            }               
+        </style>
+    </head>
+    <body>
+        <div id="signature-pad" class="signature-pad">
+            <div id="signature-options"
+                style="text-align: center; padding: 20px;">
+                <a href="{% url 'esign:type' %}">
+                    <button class="signature-button" id="draw-signature-button">Type Signature</button>
+                </a>
+                <a href="{% url 'esign:draw' %}">
+                    <button class="signature-button" id="draw-signature-button">Draw Signature</button>
+                </a>
+            </div>
+            <div class="signature-pad--body">
+                <canvas></canvas>
+            </div>
+            <div class="signature-pad--footer">
+                <div class="description">Sign above</div>
+
+                <div class="signature-pad--actions">
+                    <div>
+                        <button type="button" class="btn btn-default"
+                            data-action="clear">Clear</button>
+                        <button type="button" class="btn btn-default"
+                            data-action="change-color">Change color</button>
+                        <button type="button" class="btn btn-default"
+                            data-action="undo">Undo</button>
+
+                    </div>
+                    <div>
+                        <button type="button" class="button save"
+                            data-action="save-svg" hidden=true></button>
+                        <button type="button" class="button save"
+                            data-action="save-png" hidden=true></button>
+                        <button type="button" class="btn btn-primary"
+                            style="background-color:blue" data-action="save-jpg">Done</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal" id="confirmationModal" tabindex="-1" role="dialog">
+            <div class="modal-dialog" role="document">
+              <div class="modal-content">
+                <div class="modal-header">
+                  <h5 class="modal-title">Confirmation</h5>
+                  <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                  </button>
+                </div>
+                <div class="modal-body">
+                  Do you want to proceed with face recognition to enhance the security of your signature?
+                </div>
+                <div class="modal-footer">
+                  <button type="button" class="btn btn-primary" id="proceedWithFaceRecognitionButton">Yes</button>
+                  <button type="button" class="btn btn-secondary" id="cancelFaceRecognitionButton" data-dismiss="modal">No</button>
+                </div>
+              </div>
+            </div>
+          </div>
+        <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js"></script>
+        <script type="text/javascript" src="{% static 'js/signature_pad.js'%}"></script>
+        <script type="text/javascript" src="{% static 'js/app.js'%}"></script>
+    </body>
+</html>

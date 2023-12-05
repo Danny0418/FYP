@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    'ipware',
 ]
 
 MIDDLEWARE = [
@@ -152,3 +153,5 @@ AUTHENTICATION_BACKENDS = [
 ]
 
 # TIME_ZONE = 'Asia/Singapore'
+
+GEOIP_PATH = os.path.join(MEDIA_ROOT, 'geoip')

@@ -1,0 +1,93 @@
+{% load static %}
+{% csrf_token %}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Page</title>
+    <link rel="stylesheet" type="text/css"
+    href="{% static 'css/profile.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.12.1/css/all.min.css">
+  </head>
+<body>
+    <div class="navbar-top">
+        <div class="title">
+            <h1>Profile</h1>
+        </div>
+        <ul>
+            <li>
+                <a href="{% url 'esign:index' %}">
+                    <i class="fa fa-home fa-2x"></i>
+                </a>
+            </li>
+            <li>  
+                <a href="{% url 'esign:logout' %}">
+                    <i class="fa fa-sign-out-alt fa-2x"></i>
+                </a>
+            </li>
+        </ul>
+      </div>
+
+    <div class="sidenav">
+        <div class="profile">
+            <img src="{{ profile.photo.url }}" alt="user" width="100" height="100">
+            <div class="name">
+                {{ user.username }}
+            </div>
+            <div class="job">
+                {{ user.position }}
+            </div>
+        </div>
+
+        <div class="sidenav-url">
+            <div class="url">
+                <a href="#profile" class="active">Profile</a>
+                <hr align="center">
+            </div>
+            <div class="url">
+                <a href="{% url 'esign:upload' %}">Upload</a>
+                <hr align="center">
+            </div>
+        </div>
+    </div>
+
+    <div class="main">
+        <h2>IDENTITY</h2>
+        <div class="card">
+          <div class="card-body">
+            <table id="profile-table">
+              <tbody>
+                <tr>
+                  <td>User ID</td>
+                  <td>:</td>
+                  <td>{{ user.userID }}</td>
+                </tr>
+                <tr>
+                  <td>Username</td>
+                  <td>:</td>
+                  <td>{{ user.username }}</td>
+                </tr>
+                <tr>
+                  <td>Email</td>
+                  <td>:</td>
+                  <td>{{ user.email }}</td>
+                </tr>
+                <tr>
+                  <td>Organization</td>
+                  <td>:</td>
+                  <td>{{ user.orgID.name }}</td>
+                </tr>
+                <tr>
+                  <td>Bio</td>
+                  <td>:</td>
+                  <td>{{ profile.bio }}</td>
+                </tr>
+              </tbody>
+            </table>        
+          </div>
+        </div>
+      </div>
+</body>
+</html>

@@ -52,3 +52,5 @@ class OrganizationAdmin(admin.ModelAdmin):
 admin.site.register(Document, DocumentAdmin)
 admin.site.register(Signature, SignatureAdmin)
 admin.site.register(Organization, OrganizationAdmin)
+admin.site.register(Profile)
+admin.site.register(Log)

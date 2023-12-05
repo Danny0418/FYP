@@ -1,4 +1,4 @@
-from django.shortcuts import render, redirect, get_object_or_404
+from django.shortcuts import render, redirect
 from django.urls import reverse
 from .models import *
 from .forms import *
@@ -24,6 +24,9 @@ from pyhanko.sign.signers import SimpleSigner
 from pyhanko.pdf_utils.incremental_writer import IncrementalPdfFileWriter
 # from pyhanko.stamp import ImageStampStyle
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from .utils import is_ajax, classify_face
+import base64
+from django.core.files.base import ContentFile
 
 # def add_image_signature(request):
 #     if request.method == 'POST' and request.FILES['pdf_file'] and request.FILES['image_file']:
@@ -223,10 +226,47 @@ from pyhanko.pdf_utils.layout import SimpleBoxLayoutRule, Margins, AxisAlignment
 from pyhanko.pdf_utils.content import RawContent
 from pyhanko.pdf_utils.reader import PdfFileReader
 from pyhanko.sign.fields import SigFieldSpec
-
+from django.contrib.gis.geoip2 import GeoIP2
+from ipware import get_client_ip
+from datetime import datetime, timedelta
+import pytz
 
 def add_image_signature(request):
     if request.method == 'POST':
+        # Get the user's IP address
+        client_ip = request.META.get('HTTP_X_FORWARDED_FOR', '180.75.247.19')
+        # client_ip, _ = get_client_ip(request)
+
+        # Get geolocation information based on the IP address
+        if client_ip:
+            geoip = GeoIP2()
+            location = geoip.city(request.META.get('HTTP_X_FORWARDED_FOR', '180.75.247.19'))
+            #  location = geoip.city(client_ip)
+            geolocation_info = {
+                'IP Address': client_ip,
+                'City': location.get('city', ''),
+                'Country': location.get('country_name', ''),
+                'Region': location.get('region', ''),
+            }
+        else:
+            geolocation_info = {
+                'IP Address': 'N/A',
+                'City': 'N/A',
+                'Country': 'N/A',
+                'Region': 'N/A',
+            }
+        
+        # Add geolocation and IP information to the PDF
+        # info_text = "\n".join(f"{key}: {value}" for key, value in geolocation_info.items())
+
+        # Get the current UTC time and convert it to UTC+08
+        current_utc_time = datetime.now(pytz.utc)
+        utc_plus_8 = pytz.timezone('Asia/Shanghai')  # You can adjust this to any UTC+08 timezone
+        current_time_utc_plus_8 = current_utc_time.astimezone(utc_plus_8)
+
+        # Format the time
+        formatted_time = current_time_utc_plus_8.strftime('%I:%M:%S %p UTC+08')
+
         page_num = int(request.POST.get('page_num'))  # Get the page number from the submitted form data
         pdf_path = request.POST.get('pdf_path')  # Get the path to the PDF file from the submitted form data
 
@@ -253,7 +293,7 @@ def add_image_signature(request):
         layout_rule = SimpleBoxLayoutRule(
             x_align=AxisAlignment.ALIGN_MID,  # or LEFT/RIGHT as per your need
             y_align=AxisAlignment.ALIGN_MIN,  # Aligns content to the top
-            margins=Margins(0, 0, 0, 40)  # Adjust margins as needed
+            margins=Margins(0, 0, 0, 50)  # Adjust margins as needed
         )
 
         inner_layout_rule = SimpleBoxLayoutRule(
@@ -280,7 +320,7 @@ def add_image_signature(request):
             pdf_signer = signers.PdfSigner(
                 signature_meta, signer=signer, stamp_style=stamp.TextStampStyle(
                     # the 'signer' and 'ts' parameters will be interpolated by pyHanko, if present
-                    stamp_text='This is custom text!\nSigned by: %(signer)s\nTime: %(ts)s',
+                    stamp_text='Signed by: %(signer)s\nTime: ' + formatted_time +'\n' + 'IP Address: ' + geolocation_info['IP Address'] + '\nRegion: ' + geolocation_info['City'] + ', ' + geolocation_info['Country'],
                     text_box_style=text.TextBoxStyle(
                         font=opentype.GlyphAccumulatorFactory('media/font/NotoSans-Regular.ttf')
                     ),
@@ -321,45 +361,30 @@ def add_image_signature(request):
 #     documents_urls = zip(documents, urls)
 #     return render(request, 'esign/index.html', {'documents_urls': documents_urls, 'user_id': user_id})
 
-def index(request):
-    user_id = request.session.get('user_id')
-
-    if not user_id:
-        return render(request, '404.html', {'error_message': 'User ID not found'})
-
-    try:
-        user = CustomUser.objects.get(userID=user_id)
-        # Get all documents assigned to the user
-        assigned_documents = Document.objects.filter(docpermission__userID=user)
-    except CustomUser.DoesNotExist:
-        return render(request, '404.html', {'error_message': 'User not found'})
-
-    documents_per_page = 5
-    paginator = Paginator(assigned_documents, documents_per_page)
-    page = request.GET.get('page', 1)
-
-    try:
-        documents = paginator.page(page)
-    except PageNotAnInteger:
-        documents = paginator.page(1)
-    except EmptyPage:
-        documents = paginator.page(paginator.num_pages)
-
-    return render(request, 'esign/main.html', {'documents': documents, 'user_id': user_id})
-
-def viewDoc(request, docID):
-    user_id = request.session['user_id']
-    urls = URL.objects.get(docID_id=docID, userID_id=user_id)
-    hashed_url = urls.url
-
-    return redirect('esign:management', hashed_url=hashed_url)
 
 
-
+###############      ERROR PAGES      ################
 # Error page for non-logged in users
 def xlogin(request):
     return render(request, 'esign/xlogin.html')
 
+# Error 403 page
+def handler403(request, exception, template_name='403.html'):
+    return render(request, template_name, status=403)
+
+# Error 404 page
+def handler404(request, exception, template_name='404.html'):
+    return render(request, template_name, status=404)
+
+# Error 500 page
+def handler500(request, template_name='500.html'):
+    return render(request, template_name, status=500)
+###############      ERROR PAGES      ################
+
+
+###############      Authentication + MFA      ################
+
+# Login module
 def login_request(request):
     context = {}
     # Handles POST request
@@ -409,6 +434,7 @@ def login_request(request):
         else:
             return render(request, 'esign/user_login.html', context)
 
+# generate TOTP redirect and send email notification
 def send_totp_email(email, totp_code):
     subject = 'Your TOTP Code'
     message = f'Your TOTP code is: {totp_code}'
@@ -417,6 +443,7 @@ def send_totp_email(email, totp_code):
 
     send_mail(subject, message, from_email, recipient_list)
 
+# Regenerate TOTP code
 def resend_totp(request):
     if request.method == "POST":
         email = request.POST.get('email')  # Assuming you'll send the TOTP to a provided email
@@ -440,6 +467,7 @@ def resend_totp(request):
         # Return an error message if the request method is not POST
         return JsonResponse({'success': False, 'message': 'Invalid request method.'})
 
+# MFA page
 @login_required(login_url='esign:xlogin')    
 def verify_totp(request):
     if request.method == "POST":
@@ -473,32 +501,95 @@ def verify_totp(request):
         # Handle non-POST requests if needed
         pass
 
+# Logout module
 def logout_request(request):
     # Get the user object based on session id in request
     print("Log out the user `{}`".format(request.user.username))
     # Logout user in the request
     logout(request)
 
-    # Redirect user back to the login page with a query parameter
     # Redirect to the login page with a query parameter
     return redirect(reverse('esign:login') + '?logout=1')
 
+# session checking
 def check_session(request):
     session_expired = not request.user.is_authenticated
     return JsonResponse({'session_expired': session_expired})
-
-###############      ERROR PAGES      ################
-def handler403(request, exception, template_name='403.html'):
-    return render(request, template_name, status=403)
-
-def handler404(request, exception, template_name='404.html'):
-    return render(request, template_name, status=404)
-
-def handler500(request, template_name='500.html'):
-    return render(request, template_name, status=500)
-###############      ERROR PAGES      ################
+###############      Authentication + MFA      ################
 
 
+###############      LANDING PAGES      ################
+def index(request):
+    user_id = request.session.get('user_id')
+
+    if not user_id:
+        return render(request, '404.html', {'error_message': 'User ID not found'})
+
+    try:
+        user = CustomUser.objects.get(userID=user_id)
+        # Get all documents assigned to the user
+        assigned_documents = Document.objects.filter(docpermission__userID=user)
+    except CustomUser.DoesNotExist:
+        return render(request, '404.html', {'error_message': 'User not found'})
+
+    documents_per_page = 5
+    paginator = Paginator(assigned_documents, documents_per_page)
+    page = request.GET.get('page', 1)
+
+    try:
+        documents = paginator.page(page)
+    except PageNotAnInteger:
+        documents = paginator.page(1)
+    except EmptyPage:
+        documents = paginator.page(paginator.num_pages)
+
+    return render(request, 'esign/main.html', {'documents': documents, 'user_id': user_id})
+
+# Display brief information about the selected document in the landing page
+def get_document_details(request):
+    if 'doc_id' in request.GET:
+        doc_id = request.GET['doc_id']
+        try:
+            document = Document.objects.get(pk=doc_id)
+            assigned_users = DocPermission.objects.filter(docID=document)
+            users_info = []
+
+            for permission in assigned_users:
+                user_info = {
+                    'userID': permission.userID.userID,
+                    'username': permission.userID.username,
+                    'email': permission.userID.email,
+                    'position': permission.userID.position,
+                }
+                users_info.append(user_info)
+
+            data = {
+                'document': {
+                    'title': document.title,
+                    'created_date': document.created_date.strftime('%Y-%m-%d %H:%M:%S'),
+                    'due_date': document.due_date.strftime('%Y-%m-%d %H:%M:%S'),
+                },
+                'assigned_users': users_info,
+            }
+
+            return JsonResponse(data)
+
+        except Document.DoesNotExist:
+            print(f"Document with ID {doc_id} does not exist.")
+            return JsonResponse({'error': 'Document not found'}, status=404)
+
+    else:
+        return JsonResponse({'error': 'Document ID not provided'}, status=400)
+
+# Redirect to management function
+def viewDoc(request, docID):
+    user_id = request.session['user_id']
+    urls = URL.objects.get(docID_id=docID, userID_id=user_id)
+    hashed_url = urls.url
+
+    return redirect('esign:management', hashed_url=hashed_url)
+
+# Upload documents
 def save_pdf_to_db(request):
     if request.method == 'POST' and request.FILES.get('pdf_file'):
         pdf_file = request.FILES['pdf_file']
@@ -520,11 +611,11 @@ def save_pdf_to_db(request):
         return JsonResponse({'newURL': url.url})
     else:
         return JsonResponse({'error': 'File upload failed'}, status=400)
-
+###############      LANDING PAGES      ################
 
 
     
-###########     MANAGEMENT     ###########
+###############      MANAGEMENT      ################
 @login_required(login_url='esign:xlogin')
 def management(request, hashed_url):
     
@@ -590,28 +681,34 @@ def management(request, hashed_url):
         # Append the remark information to the remark_data list
         remark_data.append(remark_info)
 
+    for user_id in unique_user_ids:
+        comps = user_company_names.get(user_id, 'No Company')  # Get the company name or set a default value
+
+        # Fetching other user details as before
+        user_details = CustomUser.objects.get(userID=user_id)
+        username = user_details.username
+        email = user_details.email
+        role_for_user = role.filter(userID_id=user_id)
+
+        # Check if the user has 'Owner' role
+        if role_for_user.filter(type='Owner').exists():
+            # If the user is an owner, store their data in the owners_data list
+            owners_data.append((user_id, comps, username, email, role_for_user))
+
+        else:
+            # If the user is not an owner, store their data in the user_data list
+            user_data.append((user_id, comps, username, email, role_for_user))
+
     if chkPermission.type != 'Owner':
-        for user_id in unique_user_ids:
-            comps = user_company_names.get(user_id, 'No Company')  # Get the company name or set a default value
-
-            # Fetching other user details as before
-            user_details = CustomUser.objects.get(userID=user_id)
-            username = user_details.username
-            email = user_details.email
-            role_for_user = role.filter(userID_id=user_id)
-
-            # Check if the user has 'Owner' role
-            if role_for_user.filter(type='Owner').exists():
-                # If the user is an owner, store their data in the owners_data list
-                owners_data.append((user_id, comps, username, email, role_for_user))
-
-            else:
-                # If the user is not an owner, store their data in the user_data list
-                user_data.append((user_id, comps, username, email, role_for_user))
-
         docDue = document.due_date.strftime('%Y-%m-%d %H:%M')
         return render(request, 'esign/signer.html', {'hashed_url': hashed_url, 'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'owners_data':owners_data, 'user_id': user_id, 'remark_data': remark_data})
 
+    mail = document.email_sent
+    if mail is True:
+        docDue = document.due_date.strftime('%Y-%m-%d %H:%M')
+        return render(request, 'esign/owner.html', {'hashed_url': hashed_url, 'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'owners_data':owners_data, 'user_id': user_id, 'remark_data': remark_data})
+    
+    user_data = []
     for user_id in unique_user_ids:
         comps = user_company_names.get(user_id, 'No Company')  # Get the company name or set a default value
 
@@ -626,8 +723,7 @@ def management(request, hashed_url):
     companies = Organization.objects.all()  # Fetch all companies from the database
     return render(request, 'esign/manage.html', {'hashed_url': hashed_url, 'docID': docID, 'docCreate': docCreate, 'docDue': docDue, 'document': document, 'user_data': user_data, 'companies': companies, 'user_id': user_id, 'remark_data': remark_data})
 
-
-
+# Retrieving company members from the database base on selected company
 def get_names_emails_for_company(request):
     # company_id = 'COM002'
     company_ids = request.POST.getlist('company_id')
@@ -654,8 +750,58 @@ def get_names_emails_for_company(request):
     else:
         return JsonResponse({'error': 'Company ID not provided'})
 
+# Send email notification to signers
+def signer_email(request):
+    if request.method == 'POST':
+        doc_id = request.POST.get('docID')
+        users_with_permission = DocPermission.objects.filter(docID_id=doc_id).select_related('userID')
+
+        subject = 'Document Update'
+        from_email = 'd34482807@gmail.com'
+        for permission in users_with_permission:
+            if permission.type != 'Owner':
+                user = permission.userID
+                recipient_list = [user.email]
+
+                urlObj = URL.objects.get(dpID_id=permission.dpID)
+                message = 'There is an update to the document you have permission to access.\n\n' + 'Link: ' + urlObj.url
+                send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+
+        # Update the Document's email_sent flag
+        doc = Document.objects.get(docID=doc_id)
+        doc.email_sent = True
+        doc.save()
+        return JsonResponse({'status': 'success', 'message': 'Emails sent successfully'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
+
+# Send email notification to owners    
+def owner_email(request):
+    if request.method == 'POST':
+        doc_id = request.POST.get('docID')
+        user_id = request.POST.get('userID')
+        permission = DocPermission.objects.get(docID_id=doc_id, userID_id=user_id)
+
+        subject = 'Document Update'
+        from_email = 'd34482807@gmail.com'
+        
+        user = permission.userID
+        recipient_list = [user.email]
+
+        urlObj = URL.objects.get(dpID_id=permission.dpID)
+        message = 'There is an update to the document you have permission to access.\n\n' + 'Link: ' + urlObj.url
+        send_mail(subject, message, from_email, recipient_list, fail_silently=False)
+
+        # Update the Document's email_sent flag
+        doc = Document.objects.get(docID=doc_id)
+        doc.email_sent = True
+        doc.save()
+        return JsonResponse({'status': 'success', 'message': 'Emails sent successfully'})
+    else:
+        return JsonResponse({'status': 'error', 'message': 'Invalid request method'}, status=400)
 
 
+# Change document title (Owner)
 def update_document_title(request, document_id):
     if request.method == 'POST':
         new_title = request.POST.get('new_title')
@@ -665,6 +811,7 @@ def update_document_title(request, document_id):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False})
 
+# Update due date (Owner)
 def update_due(request):
     if request.method == 'POST':
         new_due = request.POST.get('new_due')
@@ -684,6 +831,7 @@ def update_due(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False})
 
+# Create new role (Owner)
 def update_permission(request):
     if request.method == 'POST':
         user_id = request.POST.get('selectedID')
@@ -701,6 +849,41 @@ def update_permission(request):
         return JsonResponse({'success': True})
     return JsonResponse({'success': False})
 
+# Change role (Owner)
+def update_role(request):
+    if request.method == 'POST':
+        user_id = request.POST.get('id')
+        document_id = request.POST.get('doc')
+        new_role = request.POST.get('role')
+        # Get the DocPermission object
+        # Create DocPermission object for the user
+        doc_permission = DocPermission.objects.get(userID_id=user_id, docID_id=document_id)
+        doc_permission.type = new_role
+        doc_permission.save()
+
+        return JsonResponse({'success': True})
+    return JsonResponse({'success': False})
+
+# Remove role (Owner)
+def delete_permission(request):
+    if request.method == 'POST':
+        user_id = request.POST.get('id')
+        document_id = request.POST.get('doc')
+        
+        try:
+            # Try to get the existing permission record
+            doc_permission = DocPermission.objects.get(userID_id=user_id, docID_id=document_id)
+            
+            # Delete the permission record
+            doc_permission.delete()
+            
+            return JsonResponse({'success': True, 'message': 'Permission deleted successfully'})
+        except DocPermission.DoesNotExist:
+            # Permission record does not exist
+            return JsonResponse({'success': False, 'message': 'Permission not found'})
+    return JsonResponse({'success': False, 'message': 'Invalid request method'})
+
+# Remark module
 def add_remark(request):
     if request.method == 'POST':
         # Extract the remark content from the submitted form data
@@ -718,10 +901,10 @@ def add_remark(request):
     # Handle invalid requests or methods
     return JsonResponse({'message': 'Invalid request'}, status=400)
 
-###########     MANAGEMENT     ###########
+###############      MANAGEMENT      ################
 
 
-###########     Sign / View     ###########
+###############      ESIGNATURE      ################
 @login_required(login_url='esign:xlogin')
 def sign(request, hashed_url):
         
@@ -768,3 +951,74 @@ def sign(request, hashed_url):
         return render(request, 'esign/sign.html', {'hashed_url': hashed_url, 'docID': docID, 'document': document, 'user_id': user_id, 'remark_data': remark_data})
 
     return render(request, 'esign/view.html', {'hashed_url': hashed_url, 'docID': docID, 'document': document, 'user_id': user_id, 'remark_data': remark_data})
+
+def face_detection_view(request):
+    return render(request, 'esign/face_detection.html', {})
+
+def draw_signature(request):
+    context = {}
+    return render(request, 'esign/draw_signature.html', context)
+
+def type_signature(request):
+    context = {}
+    return render(request, 'esign/type_signature.html', context)
+###############      ESIGNATURE      ################
+
+
+###############      PROFILE      ################
+def find_user_view(request):
+    if is_ajax(request):
+        photo = request.POST.get('photo')
+        user_id = request.POST.get('user_id')
+        print("Request Photo:", photo)
+        print("Request User ID:", user_id)
+        
+        if photo is not None:
+            _, str_img = photo.split(';base64,')
+            decoded_file = base64.b64decode(str_img)
+
+            x = Log()
+            x.photo = ContentFile(decoded_file, name='upload.png')
+            x.save()
+
+            
+            res = classify_face(x.photo.path)
+            user_exists = CustomUser.objects.filter(username=res).exists()
+
+            if user_exists:
+                user = CustomUser.objects.get(username=res)
+
+                if user.userID == user_id:
+                    profile = Profile.objects.get(user=user)
+                    x.profile = profile
+                    x.save()
+
+                    login(request, user)
+                    return JsonResponse({'success': True})
+                else:
+                    return JsonResponse({'error': 'User not found'})
+            else:
+                return JsonResponse({'error': 'Photo not found'})
+            
+def upload_profile(request):
+    user = request.user
+
+    if request.method == 'POST':
+        form = ProfileForm(request.POST, request.FILES, instance=user.profile)
+        if form.is_valid():
+            form.save()
+            return redirect('esign:profile')
+    else:
+        form = ProfileForm(instance=user.profile)
+
+    return render(request, 'esign/upload_profile.html', {'form': form, 'user': user})
+    
+def profile(request):
+    user = request.user
+
+    if hasattr(user, 'profile'):
+        profile = user.profile
+        return render(request, 'esign/profile.html', {'user': user, 'profile': profile})
+    else:
+        return render(request, '404.html', {'user': user})
+    ###############      PROFILE      ################

@@ -1,0 +1,36 @@
+{% extends 'esign/base.html' %}
+
+{% block content %}
+
+  <div class="container">
+    <div id="verificationMessageContainer" class="alert fade alert-success alert-dismissible text-left">
+      <button type="button" class="close" data-dismiss="alert">
+        <span aria-hidden="true">&times;</span>
+      </button>
+      <i class="start-icon far fa-check-circle faa-tada animated"></i>
+      <strong class="font__weight-semibold">Verification Successful!</strong> You are {{ request.user.username }}!
+    </div>
+
+    <div class="logged-in-section">
+      Logged in as: <strong>{{ request.user.username }}</strong>
+      <br><br>
+    </div>
+  </div>
+
+  <script>
+    $(document).ready(function () {
+        var username = "{{ request.user.username }}";
+
+        if (username) {
+            // Show verification message when the page loads
+            $("#verificationMessageContainer").addClass("show");
+
+            // After 5 seconds, redirect to the index page
+            setTimeout(function () {
+                window.location.href = "/esign/";
+            }, 5000);
+        }
+    });
+</script>
+
+{% endblock content %}

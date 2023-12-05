@@ -81,6 +81,7 @@ class Document(models.Model):
     )
     created_date = models.DateTimeField(auto_now_add=True)
     due_date = models.DateTimeField()
+    email_sent = models.BooleanField(default=False)
 
     def save(self, *args, **kwargs):
         if not self.due_date:
@@ -197,36 +198,22 @@ class Signature(models.Model):
 
 
 
-class Test(models.Model):
-    docID = models.CharField(max_length=6, primary_key=True)
-    title = models.CharField(max_length=255)
-    pdf_file = models.FileField(
-        upload_to='pdfs/',
-        validators=[validate_pdf_extension],
-        default=default_pdf_path
-    )
-    created_date = models.DateTimeField(auto_now_add=True)
-    due_date = models.DateTimeField()
-
-    def save(self, *args, **kwargs):
-        if not self.due_date:
-            # Set a very old date if due_date is not set
-            self.due_date = datetime(1900, 1, 1)  # Set to January 1, 1900 as an example
 
 
-        if not self.docID:
-            # Get the latest organization
-            latest_doc = Document.objects.order_by('-docID').first()
-
-            if latest_doc:
-                # Extract the numeric part, increment, and format the new ID
-                new_id = int(latest_doc.docID[3:]) + 1
-                self.docID = 'DOC' + str(new_id).zfill(3)
-            else:
-                # If there are no organizations, start with COM001
-                self.docID = 'DOC001'
-
-        super(Test, self).save(*args, **kwargs)
+class Profile(models.Model):
+    user = models.OneToOneField(CustomUser, on_delete=models.CASCADE)
+    photo = models.ImageField(blank=True, upload_to='photos')
+    bio = models.TextField()
+    created = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.title
+        return f"profile of {self.user.username}"
+    
+class Log(models.Model):
+    profile = models.ForeignKey(Profile, on_delete=models.CASCADE, blank=True, null=True)
+    photo = models.ImageField(upload_to='logs')
+    is_correct = models.BooleanField(default=False)
+    created = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return str(self.id)
