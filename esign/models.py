@@ -6,6 +6,7 @@ from django.contrib import admin
 import hashlib
 import datetime
 from .managers import CustomUserManager
+import pytz
 
 def validate_pdf_extension(value):
     if not value.name.endswith('.pdf'):
@@ -82,11 +83,23 @@ class Document(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)
     due_date = models.DateTimeField()
     email_sent = models.BooleanField(default=False)
+    assigned_users = models.ManyToManyField(CustomUser, related_name='assigned_documents')
 
     def save(self, *args, **kwargs):
+        print(f"Before save - created_date: {self.created_date} - due_date: {self.due_date}")
+        
+        singapore_tz = pytz.timezone('Asia/Singapore')
+        self.created_date = timezone.now().astimezone(singapore_tz)
+        
+        if not self.created_date:
+            self.created_date = timezone.now()
+        self.created_date = self.created_date.astimezone(singapore_tz)
+        
         if not self.due_date:
             # Set a very old date if due_date is not set
-            self.due_date = datetime.datetime(1900, 1, 1)  # Set to January 1, 1900 as an example
+            self.due_date = datetime.datetime(1900, 1, 1, tzinfo=singapore_tz)  # Set to January 1, 1900 as an example
+        else:
+            self.due_date = self.due_date.astimezone(singapore_tz)
 
         if not self.docID:
             # Get the latest organization
@@ -101,11 +114,52 @@ class Document(models.Model):
                 self.docID = 'DOC001'
 
         super(Document, self).save(*args, **kwargs)
+        print(f"After save - created_date: {self.created_date} - due_date: {self.due_date}")
+
+    def get_status(self):
+        now = timezone.now()
+        if now > self.due_date:
+            return 'expired'
+        else:
+            return 'assigned'
 
     def __str__(self):
         return self.title
 
+class PersonalDoc(models.Model):
+    pdocID = models.CharField(max_length=6, primary_key=True)
+    dpID = models.ForeignKey('DocPermission', on_delete=models.CASCADE)
+    title = models.CharField(max_length=255)
+    pdf_file = models.FileField(
+        upload_to='signed/',
+        validators=[validate_pdf_extension],
+        default=default_pdf_path,
+        null=True,
+        blank=True
+    )
+    created_date = models.DateTimeField(auto_now_add=True)
+    email_sent = models.BooleanField(default=False)
+    page = models.IntegerField(default=0)
+    reference = models.CharField(max_length=6, null=True, blank=True)
 
+    def save(self, *args, **kwargs):
+
+        if not self.pdocID:
+            # Get the latest organization
+            latest_doc = PersonalDoc.objects.order_by('-pdocID').first()
+
+            if latest_doc:
+                # Extract the numeric part, increment, and format the new ID
+                new_id = int(latest_doc.pdocID[3:]) + 1
+                self.pdocID = 'PDO' + str(new_id).zfill(3)
+            else:
+                # If there are no organizations, start with COM001
+                self.pdocID = 'PDO001'
+
+        super(PersonalDoc, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return self.title
 
 class DocPermission(models.Model):
     dpID = models.CharField(max_length=6, primary_key=True)

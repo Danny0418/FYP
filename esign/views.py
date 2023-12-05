@@ -341,27 +341,6 @@ def add_image_signature(request):
 
 
 
-@login_required(login_url='esign:xlogin')
-# def index(request):
-#     user_id = request.session['user_id']
-#     # Get all documents for the user
-#     documents = []
-#     # documents = Document.objects.filter(docID__in=DocPermission.objects.filter(userID_id=user_id).values_list('docID_id', flat=True))
-
-#     # get all the url for the documents
-#     urls = URL.objects.filter(userID_id=user_id).values_list('url', flat=True)
-
-#     for user_id in urls:
-#         # get documents for the user
-#         documents.append(Document.objects.get(docID=URL.objects.get(url=user_id).docID_id))
-
-#     user_id = request.session['user_id']
-
-#     # zip the documents and urls together
-#     documents_urls = zip(documents, urls)
-#     return render(request, 'esign/index.html', {'documents_urls': documents_urls, 'user_id': user_id})
-
-
 
 ###############      ERROR PAGES      ################
 # Error page for non-logged in users
@@ -519,6 +498,7 @@ def check_session(request):
 
 
 ###############      LANDING PAGES      ################
+@login_required(login_url='esign:xlogin')
 def index(request):
     user_id = request.session.get('user_id')
 
@@ -947,13 +927,23 @@ def sign(request, hashed_url):
         # Append the remark information to the remark_data list
         remark_data.append(remark_info)
 
-    if chkPermission.type != 'Owner':
+    if chkPermission.priority == 0:
         return render(request, 'esign/sign.html', {'hashed_url': hashed_url, 'docID': docID, 'document': document, 'user_id': user_id, 'remark_data': remark_data})
 
-    return render(request, 'esign/view.html', {'hashed_url': hashed_url, 'docID': docID, 'document': document, 'user_id': user_id, 'remark_data': remark_data})
+    chkPersonalDoc = PersonalDoc.objects.get(dpID_id=chkPermission.dpID)
+    chkPage = chkPersonalDoc.page
+
+    if chkPermission.priority == 1:
+        return render(request, 'esign/sign.html', {'hashed_url': hashed_url, 'docID': docID, 'document': document, 'user_id': user_id, 'remark_data': remark_data, 'chkPersonalDoc': chkPersonalDoc, 'chkPage': chkPage})
+    
+    return render(request, 'esign/view.html', {'hashed_url': hashed_url, 'docID': docID, 'document': document, 'user_id': user_id, 'remark_data': remark_data, 'chkPersonalDoc': chkPersonalDoc, 'chkPage': chkPage})
 
 def face_detection_view(request):
     return render(request, 'esign/face_detection.html', {})
+
+@login_required
+def homw_view(request):
+    return render(request, 'esign/home.html', {})
 
 def draw_signature(request):
     context = {}

@@ -37,6 +37,7 @@ urlpatterns = [
     ###############      ESIGNATURE      ################
     path('sign/<str:hashed_url>/', views.sign, name='sign'),
     path('face_detection/', views.face_detection_view, name='face_detection'),
+    path('home/', views.homw_view, name='home'),
     path('classify/', views.find_user_view, name='classify'),
     path('draw/', views.draw_signature, name='draw'),
     path('type/', views.type_signature, name='type'),
